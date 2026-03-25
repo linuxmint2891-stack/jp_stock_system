@@ -1,0 +1,1 @@
+for<'a, 'b> fn(&'a Vec<f64>, &'b Vec<Asset>) -> f64 {reward}

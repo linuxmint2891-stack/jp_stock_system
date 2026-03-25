@@ -1,0 +1,1 @@
+Collect<futures::stream::Then<futures::stream::Iter<std::vec::IntoIter<&str>>, {async block@src/main.rs:149:22: 149:32}, {closure@src/main.rs:149:15: 149:21}>, _>
