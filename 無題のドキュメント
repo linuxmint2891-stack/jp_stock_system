@@ -1,1 +1,9 @@
+cd jp_stock_system
 
+git init
+git add .
+git commit -m "initial commit"
+
+git branch -M main
+git remote add origin https://github.com/linuxmint2891/jp_stock_system.git
+git push -u origin main

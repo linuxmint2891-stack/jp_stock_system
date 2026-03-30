@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct OHLC {
     pub timestamp: i64,
     pub open: f64,

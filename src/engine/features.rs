@@ -1,23 +1,23 @@
 pub fn compute_features(returns: &Vec<f64>) -> Vec<Vec<f64>> {
+    let n = returns.len();
 
-    let mut features = Vec::new();
+    let mean = returns.iter().sum::<f64>() / n as f64;
 
-    for i in 0..returns.len() {
+    let mut features = Vec::with_capacity(n);
 
-        let mom1 = returns[i];
+    for i in 0..n {
+        let r = returns[i];
 
-        let mom5 = mom1;   // 仮（あとでちゃんと作る）
-        let mom20 = mom1;
-        let vol20 = returns[i].abs();
+        // クロスセクション
+        let cs = r - mean;
 
-        let interaction = mom5 * (1.0 - vol20);
+        // 👇 追加：過去平均との差（簡易リバーサル）
+        let prev = if i > 0 { returns[i - 1] } else { 0.0 };
 
         features.push(vec![
-            mom1,
-            mom5,
-            mom20,
-            vol20,
-            interaction,
+            r,        // f[0]
+            cs,       // f[1]
+            r - prev, // f[2] ← NEW（時間構造）
         ]);
     }
 

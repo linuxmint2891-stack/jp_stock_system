@@ -1,46 +1,135 @@
-use reqwest;
-use csv::ReaderBuilder;
+use crate::model::ohlc::OHLC;
 
 pub async fn fetch_ohlc(symbol: &str) -> Vec<OHLC> {
-    let period1 = 1420070400; // 2015-01-01
-    let period2 = 1735689600; // 2024-12-31
 
     let url = format!(
-        "https://query1.finance.yahoo.com/v7/finance/download/{}?period1={}&period2={}&interval=1d&events=history",
-        symbol, period1, period2
-    );
+    "https://query1.finance.yahoo.com/v8/finance/chart/{}?range=5y&interval=1d",
+    symbol
+);
 
-    let resp = reqwest::get(&url).await.unwrap().text().await.unwrap();
+    // =========================
+    // ✅ ここから処理（関数の中）
+    // =========================
+    let client = reqwest::Client::new();
 
-    let mut rdr = ReaderBuilder::new()
-        .has_headers(true)
-        .from_reader(resp.as_bytes());
+let resp = match client
+    .get(&url)
+    .header("User-Agent", "Mozilla/5.0")
+    .send()
+    .await
+{
+    Ok(r) => r,
+    Err(_) => return vec![],
+};
 
-    let mut data = vec![];
-
-    for result in rdr.records() {
-        let record = result.unwrap();
-
-        // Yahoo CSV format:
-        // Date,Open,High,Low,Close,Adj Close,Volume
-
-        let open: f64 = record[1].parse().unwrap_or(0.0);
-        let high: f64 = record[2].parse().unwrap_or(0.0);
-        let low: f64  = record[3].parse().unwrap_or(0.0);
-        if &record[4] == "null" {
-    continue;
-}
-        let volume: f64 = record[6].parse().unwrap_or(0.0);
-
-        data.push(OHLC {
-            timestamp: data.len(),
-            open,
-            high,
-            low,
-            close,
-            volume,
-        });
+    if !resp.status().is_success() {
+        return vec![];
     }
+
+    let text = match resp.text().await {
+        Ok(t) => t,
+        Err(_) => return vec![],
+    };
+
+    let json: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(j) => j,
+        Err(_) => {
+            println!("⚠️ 非JSON: {}", symbol);
+            return vec![];
+        }
+    };
+
+    // =========================
+    // JSONパース
+    // =========================
+    let result = &json["chart"]["result"];
+    if result.is_null() {
+        return vec![];
+    }
+
+    let result = &result[0];
+
+    let timestamps = match result["timestamp"].as_array() {
+        Some(v) => v,
+        None => return vec![],
+    };
+
+    let quote = &result["indicators"]["quote"][0];
+
+    let opens = match quote["open"].as_array() {
+        Some(v) => v,
+        None => return vec![],
+    };
+
+    let highs = match quote["high"].as_array() {
+        Some(v) => v,
+        None => return vec![],
+    };
+
+    let lows = match quote["low"].as_array() {
+        Some(v) => v,
+        None => return vec![],
+    };
+
+    let closes = match quote["close"].as_array() {
+        Some(v) => v,
+        None => return vec![],
+    };
+
+    let volumes = match quote["volume"].as_array() {
+        Some(v) => v,
+        None => return vec![],
+    };
+
+    let mut data = Vec::new();
+
+let len = [
+    timestamps.len(),
+    opens.len(),
+    highs.len(),
+    lows.len(),
+    closes.len(),
+    volumes.len(),
+].into_iter().min().unwrap();
+
+for i in 0..len {
+
+    let timestamp = match timestamps[i].as_i64() {
+        Some(v) => v,
+        None => continue,
+    };
+
+    let open = match opens[i].as_f64() {
+        Some(v) => v,
+        None => continue,
+    };
+
+    let high = match highs[i].as_f64() {
+        Some(v) => v,
+        None => continue,
+    };
+
+    let low = match lows[i].as_f64() {
+        Some(v) => v,
+        None => continue,
+    };
+
+    let close = match closes[i].as_f64() {
+        Some(v) => v,
+        None => continue,
+    };
+
+    let volume = volumes[i].as_f64().unwrap_or(0.0);
+
+    data.push(OHLC {
+        timestamp,
+        open,
+        high,
+        low,
+        close,
+        volume,
+    });
+}
 
     data
 }
