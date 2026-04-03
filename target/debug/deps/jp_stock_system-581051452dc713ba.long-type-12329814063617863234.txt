@@ -1,1 +1,0 @@
-futures::stream::Then<futures::stream::Iter<std::vec::IntoIter<&str>>, _, {closure@src/main.rs:149:11: 149:25}>

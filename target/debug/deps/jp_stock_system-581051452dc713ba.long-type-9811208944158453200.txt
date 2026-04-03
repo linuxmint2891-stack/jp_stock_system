@@ -1,2 +1,0 @@
-Vec<(std::string::String, Vec<OHLC>)>: Extend<(&str, Vec<OHLC>)>
-Collect<futures::stream::Then<futures::stream::Iter<std::vec::IntoIter<&str>>, {async block@src/main.rs:149:18: 149:28}, {closure@src/main.rs:149:11: 149:17}>, Vec<(std::string::String, Vec<OHLC>)>>
