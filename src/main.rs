@@ -3,25 +3,23 @@ mod engine;
 mod model;
 mod analysis;
 
+use analysis::rank::rank;
 use analysis::alpha_analysis::*;
+
 use crate::api::yahoo::fetch_ohlc;
 use crate::engine::backtest::{run_backtest, sharpe};
-use crate::engine::features::compute_features;
-use crate::engine::alpha::compute_score;
 use crate::model::ohlc::OHLC;
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 use futures::stream::{self, StreamExt};
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-
-    
 // =========================
 // CSVから銘柄読み込み
 // =========================
@@ -38,21 +36,6 @@ fn load_codes(path: &str) -> Vec<String> {
         })
         .collect()
 }
-fn rank_normalize(scores: &Vec<f64>) -> Vec<f64> {
-    let mut pairs: Vec<(usize, f64)> =
-        scores.iter().cloned().enumerate().collect();
-
-    pairs.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-
-    let n = scores.len();
-    let mut ranks = vec![0.0; n];
-
-    for (rank, (i, _)) in pairs.iter().enumerate() {
-        ranks[*i] = rank as f64 / n as f64;
-    }
-
-    ranks
-}
 
 // =========================
 // MAIN
@@ -67,34 +50,25 @@ async fn main() {
     println!("読み込み銘柄数: {}", codes.len());
 
     // =========================
-    // ② 並列でデータ取得
+    // ② データ取得
     // =========================
-    let concurrency = 50;
-let counter = Arc::new(AtomicUsize::new(0));
+    let concurrency = 20;
+    let counter = Arc::new(AtomicUsize::new(0));
 
-let results: Vec<(String, Vec<OHLC>)> = stream::iter(codes.clone())
-    .map(|code| {
-        let counter = counter.clone();
-
-        async move {
-            let data = fetch_ohlc(&code).await;
-
-            let c = counter.fetch_add(1, Ordering::Relaxed);
-
-            if c % 50 == 0 {
-                println!("progress: {}", c);
-            }
-
-            (code, data)
-        }
-    })
-    .buffer_unordered(20)
-    .collect()
-    .await;
     let results: Vec<(String, Vec<OHLC>)> = stream::iter(codes.clone())
-        .map(|code| async move {
-            let data = fetch_ohlc(&code).await;
-            (code, data)
+        .map(|code| {
+            let counter = counter.clone();
+
+            async move {
+                let data = fetch_ohlc(&code).await;
+
+                let c = counter.fetch_add(1, Ordering::Relaxed);
+                if c % 50 == 0 {
+                    println!("progress: {}", c);
+                }
+
+                (code, data)
+            }
         })
         .buffer_unordered(concurrency)
         .collect()
@@ -105,9 +79,7 @@ let results: Vec<(String, Vec<OHLC>)> = stream::iter(codes.clone())
     // =========================
     let mut all_returns: Vec<Vec<f64>> = Vec::new();
 
-    for (code, data) in results {
-        println!("{}: data len = {}", code, data.len());
-
+    for (_code, data) in results {
         if data.len() < 200 {
             continue;
         }
@@ -130,7 +102,7 @@ let results: Vec<(String, Vec<OHLC>)> = stream::iter(codes.clone())
     }
 
     // =========================
-    // ④ 長さを揃える（最重要）
+    // ④ 長さ揃え
     // =========================
     let min_len = all_returns.iter().map(|v| v.len()).min().unwrap();
     println!("共通長: {}", min_len);
@@ -144,7 +116,7 @@ let results: Vec<(String, Vec<OHLC>)> = stream::iter(codes.clone())
     let N = all_returns.len();
 
     // =========================
-    // ⑤ T×N に変換
+    // ⑤ T×N変換
     // =========================
     let mut returns_series = vec![vec![0.0; N]; T];
 
@@ -155,65 +127,153 @@ let results: Vec<(String, Vec<OHLC>)> = stream::iter(codes.clone())
     }
 
     // =========================
-// 🔥 シャッフル（正しい位置）
-// =========================
-let shuffle_flag = false; // ← trueでテスト
+    // シャッフル（検証用）
+    // =========================
+    let shuffle_flag = false;
 
-if shuffle_flag {
-    println!("⚠️ CROSS-SECTION SHUFFLE ON");
-
-    let mut rng = thread_rng();
-
-    for t in 0..returns_series.len() {
-        returns_series[t].shuffle(&mut rng);
+    if shuffle_flag {
+        println!("⚠️ SHUFFLE ON");
+        let mut rng = thread_rng();
+        for t in 0..returns_series.len() {
+            returns_series[t].shuffle(&mut rng);
+        }
     }
+
+// =========================
+// ⑥ アルファ生成
+// =========================
+let lookback = 10;
+
+let mut scores_a: Vec<Vec<f64>> = Vec::new();
+let mut scores_b: Vec<Vec<f64>> = Vec::new();
+
+for t in lookback..T-1 {
+
+    // ===== Alpha A =====
+    let returns = &returns_series[t];
+
+    let mean = returns.iter().sum::<f64>() / N as f64;
+
+    let vol_scores: Vec<f64> =
+        returns.iter().map(|r| (r - mean).abs()).collect();
+
+    let mut rev_scores = vec![0.0; N];
+
+    for i in 0..N {
+        let r =
+            returns_series[t][i]
+          + returns_series[t-1][i]
+          + returns_series[t-2][i];
+
+        rev_scores[i] = -r;
+    }
+
+    let r_vol = rank(&vol_scores);
+    let r_rev = rank(&rev_scores);
+
+    let mut alpha_a = vec![0.0; N];
+
+    for i in 0..N {
+        if r_vol[i] > 0.8 {
+            alpha_a[i] = r_rev[i];
+        }
+    }
+
+    // ===== Alpha B（Trend）=====
+    let mut trend_scores = vec![0.0; N];
+
+    for i in 0..N {
+
+        // short
+        let short =
+            0.6 * returns_series[t][i] +
+            0.3 * returns_series[t-1][i] +
+            0.1 * returns_series[t-2][i];
+
+        // long
+        let mut long = 0.0;
+        let mut w_sum = 0.0;
+
+        for j in 0..10 {
+            let w = (10 - j) as f64;
+            long += w * returns_series[t-j][i];
+            w_sum += w;
+        }
+        long /= w_sum;
+
+        // vol
+        let mut vol: f64 = 0.0;
+        for j in 0..5 {
+            vol += returns_series[t-j][i].powi(2);
+        }
+        vol = vol.sqrt();
+
+        trend_scores[i] = (short - long) / (vol + 1e-6);
+    }
+
+    let r_trend = rank(&trend_scores);
+
+    scores_a.push(alpha_a);
+    scores_b.push(r_trend);
 }
 
-    // =========================
-    // ⑥ features & scores
-    // =========================
-    let mut scores_series: Vec<Vec<f64>> = Vec::new();
-let mut alpha_map: HashMap<String, Vec<f64>> = HashMap::new();
-for t in 1..T {
-    let returns = &returns_series[t - 1];
+// =========================
+// ⑦ バックテスト
+// =========================
+let top_k: usize = 5;
 
-    // ===== 市場リターン =====
-    let market_ret = returns.iter().sum::<f64>() / returns.len() as f64;
+let pnl_a = run_backtest(
+    &scores_a,
+    &returns_series[lookback..].to_vec(),
+    top_k
+);
 
-    // ===== クロスセクション分散 =====
-    let cs_var = returns.iter()
-        .map(|r| (r - market_ret).powi(2))
-        .sum::<f64>() / returns.len() as f64;
+let pnl_b = run_backtest(
+    &scores_b,
+    &returns_series[lookback..].to_vec(),
+    top_k
+);
 
-    // ===== features =====
-    let features = compute_features(returns);
+// =========================
+// 相関・分散
+// =========================
+let corr = correlation(&pnl_a, &pnl_b);
 
-    // ===== scores =====
-    let scores: Vec<f64> = features
-        .iter()
-        .map(|f| compute_score(f))
-        .collect();
-
-    scores_series.push(scores);
+fn variance(v: &Vec<f64>) -> f64 {
+    let mean = v.iter().sum::<f64>() / v.len() as f64;
+    v.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / v.len() as f64
 }
 
-    // =========================
-    // ⑦ backtest
-    // =========================
-    let k = 50;
+let var_a = variance(&pnl_a);
+let var_b = variance(&pnl_b);
 
-    let pnl_series = run_backtest(&scores_series, &returns_series, k);
+// =========================
+// 重み（スカラー）
+// =========================
+let mut w_a: f64 = (1.0 / var_a) * (1.0 - corr);
+let mut w_b: f64 = (1.0 / var_b) * (1.0 - corr);
 
-    let s = sharpe(&pnl_series);
+let sum = w_a + w_b + 1e-6;
+w_a /= sum;
+w_b /= sum;
 
-    let mid = pnl_series.len() / 2;
+println!("weight A: {:.3}, weight B: {:.3}", w_a, w_b);
 
-    let sharpe_first = sharpe(&pnl_series[..mid].to_vec());
-    let sharpe_second = sharpe(&pnl_series[mid..].to_vec());
+// =========================
+// 最終PnL
+// =========================
+let mut pnl_final = vec![0.0; pnl_a.len()];
 
-    println!("=========================");
-    println!("📈 Sharpe Ratio: {:.4}", s);
-    println!("⏱ First Half Sharpe: {:.4}", sharpe_first);
-    println!("⏱ Second Half Sharpe: {:.4}", sharpe_second);
+for t in 0..pnl_a.len() {
+    pnl_final[t] = w_a * pnl_a[t] + w_b * pnl_b[t];
+}
 
+// =========================
+// 結果
+// =========================
+println!("=========================");
+println!("📈 Alpha A Sharpe: {:.4}", sharpe(&pnl_a));
+println!("📈 Alpha B Sharpe: {:.4}", sharpe(&pnl_b));
+println!("📈 Final Sharpe: {:.4}", sharpe(&pnl_final));
+println!("Correlation A vs B: {:.4}", corr);
 }

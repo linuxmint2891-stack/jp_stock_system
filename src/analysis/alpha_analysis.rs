@@ -1,31 +1,26 @@
-use std::collections::HashMap;
-
-// =========================
-// Sharpe計算
-// =========================
 pub fn sharpe(returns: &Vec<f64>) -> f64 {
     let mean = returns.iter().sum::<f64>() / returns.len() as f64;
+
     let var = returns.iter()
         .map(|r| (r - mean).powi(2))
         .sum::<f64>() / returns.len() as f64;
 
-    if var == 0.0 { return 0.0; }
+    if var == 0.0 {
+        return 0.0;
+    }
+
     mean / var.sqrt()
 }
 
-// =========================
-// 前半/後半Sharpe
-// =========================
 pub fn sharpe_split(returns: &Vec<f64>) -> (f64, f64) {
     let mid = returns.len() / 2;
+
     let first = sharpe(&returns[..mid].to_vec());
     let second = sharpe(&returns[mid..].to_vec());
+
     (first, second)
 }
 
-// =========================
-// 相関
-// =========================
 pub fn correlation(x: &Vec<f64>, y: &Vec<f64>) -> f64 {
     let mean_x = x.iter().sum::<f64>() / x.len() as f64;
     let mean_y = y.iter().sum::<f64>() / y.len() as f64;
@@ -37,6 +32,7 @@ pub fn correlation(x: &Vec<f64>, y: &Vec<f64>) -> f64 {
     for i in 0..x.len() {
         let dx = x[i] - mean_x;
         let dy = y[i] - mean_y;
+
         num += dx * dy;
         denom_x += dx * dx;
         denom_y += dy * dy;
