@@ -1,74 +1,141 @@
 use polars::prelude::*;
-use polars_ops::pivot::{pivot, PivotAgg};
-use jp_stock_system::utils::io;
+use std::fs;
+use std::path::Path;
+use glob::glob;
+// use google_drive3::{DriveHub, api::File};
+// use yup_oauth2::ServiceAccountAuthenticator;
 
-fn main() -> PolarsResult<()> {
-    println!("Starting data synchronization from a single large CSV...");
+const PARQUET_PATH: &str = "data/processed_market_data.parquet";
 
-    // 1. 設定：J-Quants V2から取得した最新のJSONデータ（拡張子は .csv のまま保存されていますが中身は JSON です）
-    let input_file = "data/all_stocks_daily.json";
-    let output_parquet = "data/processed_market_data.parquet";
-
-    // 2. JSONの読み込み
-    println!("Reading JSON from {}...", input_file);
-    let file = std::fs::File::open(input_file).map_err(|e| PolarsError::ComputeError(format!("IO Error: {}", e).into()))?;
+#[tokio::main]
+async fn main() -> PolarsResult<()> {
+    // --- STEP 1: JSONの集約とParquet化 ---
+    println!("🚀 Starting Data Consolidation...");
     
-    // {"daily_quotes": [...]} または {"data": [ ... ]} の形式を展開して取得
-    let json_value: serde_json::Value = serde_json::from_reader(file).map_err(|e| PolarsError::ComputeError(format!("JSON Error: {}", e).into()))?;
-    let daily_quotes = json_value.get("daily_quotes")
-        .or_else(|| json_value.get("data"))
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| PolarsError::ComputeError("Missing daily_quotes or data array".into()))?;
+    let mut lazy_dfs = Vec::new();
+    let mut processed_files = Vec::new();
 
-    // JSON配列から DataFrame に直接変換するための一時バッファ（メモリ上で処理）
-    let mut dates = Vec::with_capacity(daily_quotes.len());
-    let mut codes = Vec::with_capacity(daily_quotes.len());
-    let mut adj_closes = Vec::with_capacity(daily_quotes.len());
+    let path_pattern = "./data/daily_*.json"; 
+println!("🔍 Searching for files in: {}", path_pattern); // どこを探しているか表示
 
-    for item in daily_quotes {
-        if let (Some(d), Some(c), Some(ac)) = (
-            item.get("Date").and_then(|v| v.as_str()),
-            item.get("Code").and_then(|v| v.as_str()),
-            item.get("AdjustmentClose").or_else(|| item.get("AdjC")).and_then(|v| v.as_f64()),
-        ) {
-            dates.push(d.to_string());
-            codes.push(c.to_string());
-            adj_closes.push(ac);
-        }
+for entry in glob(path_pattern).expect("Failed to read glob pattern") {
+    let path = entry.map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+    
+    // Skip empty or very small files (market closed days)
+    let metadata = fs::metadata(&path).map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+    if metadata.len() < 100 {
+        println!("⚠️ Skipping empty file: {:?}", path);
+        processed_files.push(path); // Skip but mark as processed to delete later
+        continue;
     }
 
-    let df = DataFrame::new(vec![
-        Series::new("Date", &dates),
-        Series::new("Code", &codes),
-        Series::new("AdjustmentClose", &adj_closes),
-    ])?;
+    println!("📖 Found file: {:?}", path);
+    
+    let file = fs::File::open(&path).map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+    let df = JsonReader::new(file).finish()?;
+    
+    // Check if "daily_quotes" column exists before processing
+    if df.column("daily_quotes").is_err() {
+        println!("⚠️ Skipping file without daily_quotes: {:?}", path);
+        processed_files.push(path);
+        continue;
+    }
 
-    // 3. データ成形（Pivot）
-    println!("Pivoting data: transforming from Long to Wide format...");
+    // "daily_quotes" カラムを展開(explode)してネスト解除(unnest)する
+    let unnested = df.explode(["daily_quotes"])?.unnest(["daily_quotes"])?;
+    lazy_dfs.push(unnested.lazy());
 
-    // J-Quants V2のヘッダー名に修正: 
-    // values: AdjustmentClose (調整後終値), index: Date (日付), columns: Code (銘柄コード)
-    let wide_df = pivot(
-        &df,
-        ["Date"],                  // 行にする列 (index)
-        ["Code"],                  // 列に展開する列 (columns)
-        Some(["AdjustmentClose"]), // 値にする列 (values)
-        false,                     // sort_columns
-        Some(PivotAgg::First),     // 重複時の処理
-        None                       // separator
-    ).map_err(|e| PolarsError::ComputeError(format!("Pivot failed: {}", e).into()))?;
+    processed_files.push(path);
+}
 
-    // 4. 数値キャスト（Date以外の全銘柄列をFloat64に）
-    let mut processed_df = wide_df.lazy()
-        .with_columns([
-            col("*").exclude(["Date"]).cast(DataType::Float64)
-        ])
-        .collect()?;
+    if lazy_dfs.is_empty() {
+        println!("✨ No new JSON files to process.");
+    } else {
+        // 既存のParquetがあれば読み込んで結合
+        let final_lf = if Path::new(PARQUET_PATH).exists() {
+            let existing_lf = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?;
+            concat([existing_lf, concat(lazy_dfs, UnionArgs::default())?], UnionArgs::default())?
+        } else {
+            concat(lazy_dfs, UnionArgs::default())?
+        };
 
-    // 5. 保存
-    println!("Saving to Parquet (Shape: {:?})", processed_df.shape());
-    io::save_parquet(&mut processed_df, output_parquet)?;
+        // 重複排除と保存
+        let mut final_df = final_lf
+            .unique(Some(vec!["Date".into(), "Code".into()]), UniqueKeepStrategy::Last)
+            .collect()?;
 
-    println!("Success! Data is ready for production.");
+        let mut file = fs::File::create(PARQUET_PATH)?;
+        ParquetWriter::new(&mut file).finish(&mut final_df)?;
+        println!("✅ Parquet updated. Total rows: {}", final_df.height());
+
+        // --- STEP 2: 使用済みJSONの一括削除 ---
+        for path in processed_files {
+            fs::remove_file(&path).map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+        }
+        println!("🗑️ All processed JSON files deleted. Storage cleared!");
+    }
+
     Ok(())
 }
+/*
+async fn upload_to_gdrive(file_path: &str) -> anyhow::Result<()> {
+    // .envファイルを読み込む
+    dotenvy::dotenv().ok();
+    let folder_id = std::env::var("GDRIVE_FOLDER_ID").expect("GDRIVE_FOLDER_ID must be set in .env");
+
+    // サービスアカウントのキーを読み込む
+    let sa_key = yup_oauth2::read_service_account_key("credentials.json").await?;
+    let auth = ServiceAccountAuthenticator::builder(sa_key).build().await?;
+    
+    // hyper 0.14 互換のクライアント作成
+    let https = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()?
+        .https_or_http()
+        .enable_http1()
+        .build();
+    let client = hyper::Client::builder().build(https);
+    
+    let hub = DriveHub::new(client, auth);
+
+    let filename = "processed_market_data.parquet";
+
+    // 既存の同名ファイルを検索（指定フォルダ内）
+    let query = format!("name = '{}' and trashed = false and '{}' in parents", filename, folder_id);
+    let result = hub.files().list()
+        .q(&query)
+        .supports_all_drives(true)
+        .include_items_from_all_drives(true)
+        .doit().await?;
+
+        // 検索ロジックを飛ばして、直接IDを指定してみる
+let file_id = Some("1dITBY40dMqZsKm_2-s3eHCc_5IVVh8vp".to_string()); 
+
+if let Some(id) = file_id {
+    println!("🔄 Forcing update with ID: {}", id);
+    // ... updateの処理
+}
+
+    let file_id = result.1.files.and_then(|files: Vec<File>| files.get(0).and_then(|f| f.id.clone()));
+
+    let file_content = fs::File::open(file_path)?;
+
+    if let Some(id) = file_id {
+        // --- 既存ファイルがある場合は「上書き更新」 ---
+        println!("🔄 Existing file found (ID: {}). Updating...", id);
+        hub.files().update(File::default(), &id)
+            .upload(file_content, "application/octet-stream".parse().unwrap())
+            .await?;
+    } else {
+        // --- ない場合は「新規作成」 ---
+        println!("🆕 No existing file found in the folder. Creating new file...");
+        let mut f = File::default();
+        f.name = Some(filename.to_string());
+        f.parents = Some(vec![folder_id]); // ここで親フォルダを指定
+        
+        hub.files().create(f)
+            .upload(file_content, "application/octet-stream".parse().unwrap())
+            .await?;
+    }
+    Ok(())
+}
+    */

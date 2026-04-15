@@ -1,0 +1,6 @@
+   Compiling jp_stock_system v0.1.0 (/home/michiharu/my_project/jp_stock_system)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.97s
+     Running `target/debug/sync_all`
+📊 あなたのストレージ状況: 使用量 3194733 / 全容量 16106127360
+🔄 自分の容量を使って上書きします (ID: 14XJseqjPvmLpCMZ4VK6nIiu2lAemj3wB)...
+✅ 上書き成功！

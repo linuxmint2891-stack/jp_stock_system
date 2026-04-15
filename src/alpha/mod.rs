@@ -2,6 +2,7 @@ use polars::prelude::*; // これを追加
 
 pub mod alpha_a;
 pub mod mean_reversion;
+pub mod momentum;
 
 pub enum Strategy {
     AlphaA,

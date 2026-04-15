@@ -16,7 +16,7 @@ ndarray = "0.15"
 ndarray-linalg = "0.16"
 ndarray-stats = "0.5"
 # --- Polars 関連 ---
-polars = { version = "0.40", features = ["lazy", "pivot", "parquet", "dtype-struct", "rolling_window", "strings"] }
+polars = { version = "0.40", features = ["lazy", "pivot", "parquet", "dtype-struct", "rolling_window", "strings", "json", "temporal", "regex"] }
 polars-ops = { version = "0.40", features = ["pivot"] }
 
 # --- 通信・シリアライズ 関連 (ここを一つにまとめる) ---
@@ -26,3 +26,9 @@ serde_json = "1.0"
 
 # --- その他 ---
 glob = "0.3"
+anyhow = "1.0.102"
+google-drive3 = "5.0"
+yup-oauth2 = "9.0"
+hyper = { version = "0.14", features = ["full"] }
+hyper-rustls = { version = "0.25", features = ["tokio-runtime", "http1", "http2"] }
+dotenvy = "0.15"

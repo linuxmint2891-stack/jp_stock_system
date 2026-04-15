@@ -1,0 +1,19 @@
+   Compiling jp_stock_system v0.1.0 (/home/michiharu/my_project/jp_stock_system)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.98s
+     Running `target/debug/sync_data`
+🚀 Starting Data Consolidation...
+🔍 Searching for files in: ./data/daily_*.json
+📖 Found file: "data/daily_2024-04-11.json"
+📖 Found file: "data/daily_2024-04-12.json"
+📖 Found file: "data/daily_2024-04-15.json"
+📖 Found file: "data/daily_2024-04-16.json"
+📖 Found file: "data/daily_2024-04-17.json"
+📖 Found file: "data/daily_2024-04-18.json"
+📖 Found file: "data/daily_2024-04-19.json"
+📖 Found file: "data/daily_2024-04-22.json"
+📖 Found file: "data/daily_2024-04-23.json"
+📖 Found file: "data/daily_2024-04-24.json"
+📖 Found file: "data/daily_2024-04-25.json"
+📖 Found file: "data/daily_2024-04-26.json"
+📖 Found file: "data/daily_2024-04-29.json"
+Error: SchemaMismatch(ErrString("invalid series dtype: expected `Struct`, got `null`"))
