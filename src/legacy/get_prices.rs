@@ -7,20 +7,14 @@ use chrono::{NaiveDate, Duration, Local, Datelike, Weekday};
 use std::fs;
 use std::path::Path;
 use tokio;
-use dotenvy::dotenv;
-use std::env;
+use jp_stock_system::utils::settings::Settings;
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
-    let target_dir = "data"; // JSON保存先
-    let min_valid_size = 800 * 1024; // 800KB しきい値
-
-    // APIキーの取得
-    let api_key = env::var("JQUANTS_API_KEY").unwrap_or_else(|_| {
-        // フォールバックとして既存のキー（auth.rsにあるもの）を使用
-        "-fMC9EnlXau-2iA_I3xk6cyZxAI_xZutVBNVeht3VsU".to_string()
-    });
+    let settings = Settings::new().expect("Failed to load settings");
+    let target_dir = &settings.data.target_dir;
+    let min_valid_size = settings.data.min_valid_size;
+    let api_key = &settings.jquants.api_key;
 
     // 1. 保存先ディレクトリの準備
     if let Err(e) = fs::create_dir_all(target_dir) {
@@ -88,7 +82,7 @@ async fn main() {
 
         // 4. 実際のダウンロード処理
         println!("🚀 Fetching data for {}...", date_str);
-        match fetch_data(&client, &api_key, &date).await {
+        match fetch_data(&client, &api_key, &date, target_dir).await {
             Ok(_) => {
                 // Freeプランのレートリミット (5req/min) に配慮して約13秒待機
                 tokio::time::sleep(tokio::time::Duration::from_millis(13000)).await;
@@ -107,10 +101,10 @@ async fn main() {
     println!("🎯 All tasks completed!");
 }
 
-async fn fetch_data(client: &Client, api_key: &str, date: &NaiveDate) -> Result<bool, Box<dyn std::error::Error>> {
+async fn fetch_data(client: &Client, api_key: &str, date: &NaiveDate, target_dir: &str) -> Result<bool, Box<dyn std::error::Error>> {
     let url = "https://api.jquants.com/v2/equities/bars/daily";
     let date_str = date.format("%Y-%m-%d").to_string();
-    let file_path = format!("data/daily_{}.json", date_str);
+    let file_path = format!("{}/daily_{}.json", target_dir, date_str);
 
     let res = client.get(url)
         .header("x-api-key", api_key)

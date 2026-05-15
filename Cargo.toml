@@ -2,6 +2,7 @@
 name = "jp_stock_system"
 version = "0.1.0"
 edition = "2021"
+default-run = "jp_stock_system"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -15,20 +16,25 @@ nalgebra = "0.32"
 ndarray = "0.15"
 ndarray-linalg = "0.16"
 ndarray-stats = "0.5"
+reqwest = { version = "0.11", features = ["json", "blocking", "cookies"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
 # --- Polars 関連 ---
 polars = { version = "0.40", features = ["lazy", "pivot", "parquet", "dtype-struct", "rolling_window", "strings", "json", "temporal", "regex"] }
 polars-ops = { version = "0.40", features = ["pivot"] }
 
-# --- 通信・シリアライズ 関連 (ここを一つにまとめる) ---
-reqwest = { version = "0.11", features = ["json", "blocking"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
 # --- その他 ---
 glob = "0.3"
-anyhow = "1.0.102"
+regex = "1.10"
+anyhow = "1.0"
 google-drive3 = "5.0"
 yup-oauth2 = "9.0"
 hyper = { version = "0.14", features = ["full"] }
 hyper-rustls = { version = "0.25", features = ["tokio-runtime", "http1", "http2"] }
 dotenvy = "0.15"
+config = "0.14"
+clap = { version = "4.4", features = ["derive", "cargo"] }
+ratatui = "0.26"
+crossterm = { version = "0.27", features = ["events"] }
+rss = "2.0"

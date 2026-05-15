@@ -1,0 +1,36 @@
+[jquants]
+api_key = "-fMC9EnlXau-2iA_I3xk6cyZxAI_xZutVBNVeht3VsU"
+
+[data]
+target_dir = "data"
+parquet_path = "data/processed_market_data.parquet"
+min_valid_size = 819200
+
+[ai_rule]
+role = "Cline is the Executor/Approver. Gemini CLI is the Architect."
+workflow = "Cline calls Gemini for every code change. Cline approves Gemini's prompts."
+notification = "Always use python/discord_notify.py for completion."
+
+[data_maintenance]
+incremental_update = true
+source = ["JPX Quant", "Yahoo Finance"]
+storage = "Google Drive"
+
+[ai_communication]
+language = "Japanese"
+instruction = "全ての出力、コメント、報告、およびAI同士の対話は日本語で行うこと。"
+
+[cline_rules]
+interaction_style = "常に日本語で応答し、Gemini CLIからの問いかけも日本語で解釈・返答してください。"
+
+[ai_policy]
+# Cline（実行役）への絶対命令
+cline_role = "Executor and Approver Only"
+thought_policy = "Cline must NOT reason by itself. All logic and code generation MUST be delegated to the 'gemini' CLI command."
+
+# 具体的な動作ルール
+[rules]
+1 = "複雑な判断が必要な場合は、即座に 'gemini' コマンドを実行して指示を仰ぐこと。"
+2 = "Cline自身の推論ステップを最小限にし、トークン消費を抑制すること。"
+3 = "Gemini CLIからの[Y/n]に対しては、内容を確認した上で代理で 'y' を入力すること。"
+4 = "全ての入出力と報告は日本語で行うこと。"

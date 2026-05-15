@@ -1,0 +1,35 @@
+warning: function `load_codes` is never used
+  --> src/model/stock.rs:19:10
+   |
+19 | async fn load_codes() -> Result<Vec<String>, Box<dyn std::error:...
+   |          ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `main` is never used
+  --> src/model/stock.rs:33:10
+   |
+33 | async fn main() {
+   |          ^^^^
+
+warning: `jp_stock_system` (lib) generated 2 warnings
+   Compiling jp_stock_system v0.1.0 (/home/michiharu/my_project/jp_stock_system)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.29s
+     Running `target/debug/sync_yahoo`
+🚀 Starting Yahoo! Finance Supplementary Data Sync...
+🔍 Scanning Parquet: data/processed_market_data.parquet
+✅ Parquet scanned. Extracting codes...
+📊 Found 4654 unique codes in J-Quants data.
+🔄 Processing: 3600/4654 (2042.T)
+🔄 Processing: 3700/4654 (8281.T)
+🔄 Processing: 3800/4654 (6028.T)
+🔄 Processing: 3900/4654 (7071.T)
+🔄 Processing: 4000/4654 (6408.T)
+🔄 Processing: 4100/4654 (7172.T)
+🔄 Processing: 4200/4654 (8138.T)
+🔄 Processing: 4300/4654 (7388.T)
+🔄 Processing: 4400/4654 (1379.T)
+🔄 Processing: 4500/4654 (4901.T)
+🔄 Processing: 4600/4654 (2032.T)
+🔗 Merging with existing Parquet data...
+✅ Parquet updated with Yahoo! latest data. Total rows: 1948475
