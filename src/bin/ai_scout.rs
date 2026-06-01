@@ -9,10 +9,18 @@ use chrono::Local;
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
     let discord_webhook_url = std::env::var("DISCORD_WEBHOOK_URL").ok();
-    if let Some(ref url) = discord_webhook_url {
-        println!("🔍 Debug: DISCORD_WEBHOOK_URL loaded (length: {})", url.len());
-    } else {
-        println!("⚠️ Debug: DISCORD_WEBHOOK_URL not found in environment");
+    let discord_bot_token = std::env::var("DISCORD_BOT_TOKEN").ok();
+    let discord_channel_id = std::env::var("DISCORD_CHANNEL_ID").ok();
+
+    if discord_webhook_url.is_some() {
+        println!("🔍 Debug: DISCORD_WEBHOOK_URL loaded");
+    }
+    if discord_bot_token.is_some() && discord_channel_id.is_some() {
+        println!("🔍 Debug: DISCORD_BOT_TOKEN and CHANNEL_ID loaded");
+    }
+    
+    if discord_webhook_url.is_none() && (discord_bot_token.is_none() || discord_channel_id.is_none()) {
+        println!("⚠️ Debug: No Discord notification method configured in environment");
     }
 
     // ログファイルの準備
@@ -122,7 +130,15 @@ async fn main() -> Result<()> {
     let latest_date_df = base_lf.clone().select([col("Date").max()]).collect()?;
     let latest_date_av = latest_date_df.column("Date")?.get(0)?;
     let latest_date_str = latest_date_av.to_string().replace("\"", "");
+    
+    let today_str = Local::now().format("%Y-%m-%d").to_string();
+    println!("📅 Latest date in data: {}", latest_date_str);
+    if latest_date_str != today_str {
+        println!("⚠️  Warning: Data is not up-to-date (Latest: {}, Today: {}).", latest_date_str, today_str);
+        println!("⚠️  Please run 'sync_yahoo' if you need today's momentum stocks.");
+    }
 
+    println!("🔍 Screening for momentum stocks (Price < 2000, Turnover > 100M, Above MA5, Change > 1%)...");
     let scout_candidates = base_lf
         .filter(col("Date").eq(lit(latest_date_str.clone())))
         .filter(
@@ -136,9 +152,11 @@ async fn main() -> Result<()> {
         .collect()?;
     
     if scout_candidates.height() == 0 {
-        println!("(No potential buy signals found)");
+        println!("ℹ️  No potential momentum stocks found for {}.", latest_date_str);
         return Ok(());
     }
+
+    println!("✅ Found {} momentum candidates.", scout_candidates.height());
 
     // --- 追加: リアルタイムニュースの取得とマージ ---
     let candidate_codes: Vec<String> = scout_candidates.column("Code")?
@@ -170,16 +188,19 @@ async fn main() -> Result<()> {
     let names = scout_candidates.column("Name")?.str()?;
     let prices = scout_candidates.column("AdjC")?.f64()?;
     let changes = scout_candidates.column("Change(%)")?.f64()?;
-    // let news_texts = scout_candidates.column("news_text")?.str()?; // Parquetから読み込んだ古いデータ
 
     for i in 0..scout_candidates.height() {
-        let code = codes.get(i).unwrap_or("");
+        let raw_code = codes.get(i).unwrap_or("");
+        // 銘柄コードを4桁に標準化 (5桁・6桁の場合は先頭4桁を切り出す)
+        let code = if raw_code.len() > 4 { &raw_code[0..4] } else { raw_code };
+        
         let name = names.get(i).unwrap_or("");
         let price = prices.get(i).unwrap_or(0.0);
         let change = changes.get(i).unwrap_or(0.0);
         
         // 最新ニュースがあればそれを使う、なければ空文字
-        let news_text = news_map.get(code).map(|s| s.as_str()).unwrap_or("");
+        // news_map のキーも raw_code (元のCode) であることに注意
+        let news_text = news_map.get(raw_code).map(|s| s.as_str()).unwrap_or("");
 
         let header = format!("\n--- [銘柄分析] {} {} (価格: {}円, 前日比: {:.2}%) ---", code, name, price, change);
         println!("{}", header);
@@ -192,32 +213,29 @@ async fn main() -> Result<()> {
                 println!("{}", res_text);
                 writeln!(log_file, "{}", res_text)?;
 
-                // Discord通知 (GO判定の場合のみ)
-                if result.decision == "GO" {
-                    if let Some(ref url) = discord_webhook_url {
-                        if let Err(e) = jp_stock_system::notifier::send_discord_notification(
-                            url,
-                            code,
-                            name,
-                            price,
-                            result.sentiment_score,
-                            &result.reasons.join(" / "),
-                            &result.risk_factor,
-                        ).await {
-                            eprintln!("⚠️ Discord通知失敗: {}", e);
-                        }
-                    }
+                // Discord通知 (新モジュールを使用)
+                // すべての結果を通知するか、GOのみにするかは運用に合わせて調整可能
+                // ここでは実装案に従い、GO判定またはガードレール発動などの重要情報を通知
+                let ticker_label = format!("{} ({})", name, code);
+                let combined_reason = format!("{}\n\nリスク: {}", result.reasons.join(" / "), result.risk_factor);
+                
+                if let Err(e) = jp_stock_system::api::discord::notify_discord(
+                    &ticker_label, 
+                    result.sentiment_score, 
+                    &combined_reason
+                ).await {
+                    eprintln!("Discord通知中にエラーが発生: {:?}", e);
+                }
 
-                    // ペーパートレード台帳への記録 (スコア 0.70 以上)
-                    if result.sentiment_score >= 0.70 {
-                        if let Err(e) = jp_stock_system::paper_trade::record_virtual_buy(
-                            code,
-                            name,
-                            price,
-                            100 // 100株
-                        ) {
-                            eprintln!("❌ ペーパートレード記録失敗: {}", e);
-                        }
+                // ペーパートレード台帳への記録 (スコア 0.70 以上)
+                if result.decision == "GO" && result.sentiment_score >= 0.70 {
+                    if let Err(e) = jp_stock_system::paper_trade::record_virtual_buy(
+                        code,
+                        name,
+                        price,
+                        100 // 100株
+                    ) {
+                        eprintln!("❌ ペーパートレード記録失敗: {}", e);
                     }
                 }
             }
