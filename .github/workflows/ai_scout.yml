@@ -1,0 +1,66 @@
+name: AI Scout Daily Automation
+
+on:
+  schedule:
+    # 毎日日本時間 15:15 (UTC 06:15) に実行
+    # cronの指定はUTC（協定世界時）ベースのため、9時間引いた時間を指定します
+    - cron: '15 6 * * 1-5'
+  workflow_dispatch: # 必要に応じて手動トリガーでも起動できるようにする
+
+env:
+  CARGO_TERM_COLOR: always
+  # 必要に応じてGCSやDiscordの環境変数をここに定義（GitHub Secretsから注入）
+  # DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  # GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCS_SA_KEY }}
+
+jobs:
+  scout_and_analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 1. Rust 開発環境のセットアップとキャッシュによる高速化
+    - name: Setup Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Rust Cache
+      uses: swatinem/rust-cache@v2
+
+    # 2. CI環境（Ubuntu）に Ollama をインストールしてバックグラウンド起動
+    - name: Install and Start Ollama
+      run: |
+        curl -fsSL https://ollama.com/install.sh | sh
+        # バックグラウンドでサーバーを起動し、起動を少し待つ
+        ollama serve &
+        sleep 5
+        # 必要なモデル（Gemma 3）をローカル環境にプル
+        ollama pull gemma3:latest
+
+    # 3. LLM コマンドラインツール（llm）とプラグインのセットアップ
+    - name: Install LLM CLI & Plugins
+      run: |
+        pipx install llm
+        llm install llm-ollama
+        # クラウド版Geminiを併用する場合はここでプラグイン追加とキー設定を行う
+        # llm install llm-gemini
+        # llm keys set gemini "${{ secrets.GEMINI_API_KEY }}"
+
+    # 4. パイプラインの実行（ビルド＆リリース実行）
+    - name: Run AI Scout Pipeline
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: |
+        # 本番運用のため --release フラグで最適化ビルドして実行
+        cargo run --release --bin ai_scout
+
+    # 5. 生成された成果物（CSVやログ）の永続化（GCS移行前の一時措置）
+    - name: Upload execution artifacts
+      uses: actions/artifact-upload@v4
+      with:
+        name: ai-scout-results-${{ github.job }}
+        path: |
+          *.csv
+          *.txt
+        retention-days: 7
