@@ -68,7 +68,11 @@ pub fn update_portfolio_prices(market_data_path: &str) -> Result<(), Box<dyn std
     
     let df_latest_prices = df_market.lazy()
         .filter(col("Date").eq(lit(latest_date.as_str())))
-        .select([col("Code").alias("code"), col("AdjC").alias("price")])
+        // Code を 4桁に標準化して join 用のキーにする
+        .select([
+            col("Code").str().slice(lit(0), lit(4)).alias("code"),
+            col("AdjC").alias("price")
+        ])
         .collect()?;
 
     // 3. 結合（Join）して最新株価をマッピング

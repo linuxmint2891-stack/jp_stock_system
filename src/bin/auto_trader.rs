@@ -1,45 +1,61 @@
-use anyhow::Result;
 use std::process::Command;
+use std::fs;
 use chrono::Local;
+use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    println!("🚀 Starting Full Automated Trading System Lifecycle...");
-    let start_time = Local::now();
-    println!("🕒 Current Time: {}", start_time.format("%Y-%m-%d %H:%M:%S"));
+    let today = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    println!("==================================================");
+    println!("🚀 全自動AIトレーディングシステム 始動: {}", today);
+    println!("==================================================");
 
-    // Phase 1 & 2: Data Collection & Incremental Update (including Yahoo/J-Quants hybrid)
-    println!("\n--- [Phase 1 & 2] Market Data Sync & Incremental Update ---");
-    run_bin("sync_yahoo").await?;
+    // --- フォルダの事前準備 ---
+    fs::create_dir_all("data")?;
+    fs::create_dir_all("logs")?;
 
-    // Phase 3 & 4: AI Qualitative Analysis & Execution
-    // ai_scout.rs already implements:
-    // 1. Technical screening
-    // 2. Selective news scraping
-    // 3. Ollama (Gemma 3) qualitative analysis
-    // 4. Discord notification
-    // 5. Paper trade recording
-    println!("\n--- [Phase 3 & 4] AI Qualitative Analysis & Execution ---");
-    run_bin("ai_scout").await?;
-
-    let end_time = Local::now();
-    let duration = end_time - start_time;
-    println!("\n🏁 Full Automated Trading Cycle Completed in {} min {} sec.", 
-        duration.num_minutes(), duration.num_seconds() % 60);
-
-    Ok(())
-}
-
-async fn run_bin(bin_name: &str) -> Result<()> {
-    println!("📦 Executing: cargo run --release --bin {}", bin_name);
+    // ==================================================
+    // 1. 【Phase 1: 収集】最新の市場データ(東証全銘柄)の同期
+    // ==================================================
+    println!("\n📥 [Phase 1] 市場データの同期を開始 (sync_yahoo)...");
     
-    let status = Command::new("cargo")
-        .args(["run", "--release", "--bin", bin_name])
+    let status_sync = Command::new("cargo")
+        .args(["run", "--release", "--bin", "sync_yahoo"])
         .status()?;
 
-    if !status.success() {
-        return Err(anyhow::anyhow!("Binary {} failed with status {}", bin_name, status));
+    if !status_sync.success() {
+        return Err(anyhow::anyhow!("❌ Phase 1: 市場データの同期に失敗しました。"));
+    }
+    println!("✅ Phase 1 完了: 市場データが最新に更新されました。");
+
+    // ==================================================
+    // 2. 【Phase 2, 3 & 4】AI分析・執行ライフサイクル (AiScout)
+    // ==================================================
+    // ai_scout.rs が以下の処理を統合して実行します：
+    // - Phase 2: トレンド検知および対象銘柄の最新ニュース取得・マージ
+    // - Phase 3: Ollama (Gemma 3) による定性投資判断
+    // - Phase 4: Discord通知およびペーパートレード台帳への記録
+    
+    println!("\n🧠 [Phase 2, 3 & 4] AIスカウトおよび執行パイプラインを開始...");
+    
+    let status_aiscout = Command::new("cargo")
+        .args(["run", "--release", "--bin", "ai_scout"])
+        .status()?;
+
+    if !status_aiscout.success() {
+        return Err(anyhow::anyhow!("❌ AIスカウトの実行中にエラーが発生しました。"));
     }
     
+    println!("\n✅ AIスカウトパイプラインが正常に完了しました。");
+
+    // ==================================================
+    // 5. 【Future Phase】実際の証券会社APIへの自動発注
+    // ==================================================
+    // 将来的に、paper_trade だけでなく実際の証券会社APIを呼び出すモジュールを
+    // ここで結合することで、完全な実弾トレードへと移行可能です。
+    
+    println!("\n==================================================");
+    println!("🏁 すべてのパイプライン処理が正常に終了しました。");
+    println!("==================================================");
     Ok(())
 }
