@@ -6,3 +6,15 @@ data/
 # 認証情報が含まれる可能性のあるファイル
 target/
 .env
+# Security tokens and configs
+credentials.json
+tokencache.json
+client_secret.json
+config.json
+.DS_Store
+
+credentials.json
+tokencache.json
+client_secret.json
+config.json
+.DS_Store
