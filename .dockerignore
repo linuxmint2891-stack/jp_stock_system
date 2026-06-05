@@ -1,0 +1,13 @@
+target/
+.git/
+.env
+data/
+logs/
+node_modules/
+venv/
+__pycache__/
+*.xls
+*.xlsx
+*.csv
+*.parquet
+*.db
