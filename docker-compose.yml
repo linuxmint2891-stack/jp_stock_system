@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  jp-stock-system:
+    build: .
+    container_name: jp_stock_system
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Optional: Mount .env and settings.toml to allow easy configuration changes without rebuilding
+      - ./.env:/app/.env
+      - ./settings.toml:/app/settings.toml
+    stdin_open: true # Required for interactive TUI
+    tty: true        # Required for interactive TUI
+    environment:
+      - RUST_LOG=info
+      # For Ollama connection if it's running on the host
+      - OLLAMA_URL=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: jp_stock_network
