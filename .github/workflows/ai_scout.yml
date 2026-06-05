@@ -57,7 +57,7 @@ jobs:
 
     # 5. 生成された成果物（CSVやログ）の永続化（GCS移行前の一時措置）
     - name: Upload execution artifacts
-      uses: actions/artifact-upload@v4
+      uses: actions/upload-artifact@v4
       with:
         name: ai-scout-results-${{ github.job }}
         path: |
