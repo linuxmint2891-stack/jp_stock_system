@@ -47,6 +47,28 @@ jobs:
         # llm install llm-gemini
         # llm keys set gemini "${{ secrets.GEMINI_API_KEY }}"
 
+        # 1. GitHubのリポジトリから最新コードを取得（既存ステップ）
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 🔑 2. Google Cloud の認証を通す（追加するステップ）
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets::GCP_SA_KEY }}
+
+      # 🛠 3. gcloud/gsutil のセットアップ（追加するステップ）
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 📥 4. GCSバケットから最新データをCI環境に引き抜く（追加するステップ）
+      - name: Download latest data from GCS
+        run: |
+          mkdir -p data logs
+          # あなたのGCSバケット名（例: my-stock-bucket）に書き換えてください
+          gsutil cp gs://GCP_SA_KEY/processed_market_data.parquet data/ || echo "Parquet not found in GCS, using fallback."
+          gsutil cp gs://GCP_SA_KEY/stocks.db ./ || echo "SQLite DB not found in GCS, creating new."
+
     # 4. パイプラインの実行（ビルド＆リリース実行）
     - name: Run AI Scout Pipeline
       env:
