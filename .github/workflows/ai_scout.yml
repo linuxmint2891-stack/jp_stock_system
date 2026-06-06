@@ -3,15 +3,11 @@ name: AI Scout Daily Automation
 on:
   schedule:
     # 毎日日本時間 15:15 (UTC 06:15) に実行
-    # cronの指定はUTC（協定世界時）ベースのため、9時間引いた時間を指定します
     - cron: '15 6 * * 1-5'
-  workflow_dispatch: # 必要に応じて手動トリガーでも起動できるようにする
+  workflow_dispatch: # 手動トリガー
 
 env:
   CARGO_TERM_COLOR: always
-  # 必要に応じてGCSやDiscordの環境変数をここに定義（GitHub Secretsから注入）
-  # DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-  # GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCS_SA_KEY }}
 
 jobs:
   scout_and_analyze:
@@ -27,7 +23,7 @@ jobs:
 
     - name: Rust Cache
       uses: swatinem/rust-cache@v2
-
+      
     # 2. CI環境（Ubuntu）に Ollama をインストールしてバックグラウンド起動
     - name: Install and Start Ollama
       run: |
@@ -43,33 +39,25 @@ jobs:
       run: |
         pipx install llm
         llm install llm-ollama
-        # クラウド版Geminiを併用する場合はここでプラグイン追加とキー設定を行う
-        # llm install llm-gemini
-        # llm keys set gemini "${{ secrets.GEMINI_API_KEY }}"
+        
+    # 🔑 4. Google Cloud の認証を通す
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-        # 1. GitHubのリポジトリから最新コードを取得（既存ステップ）
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # 🛠 5. gcloud/gsutil のセットアップ
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
 
-      # 🔑 2. Google Cloud の認証を通す（追加するステップ）
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets::GCP_SA_KEY }}
+    # 📥 6. GCSバケットから最新データをCI環境に引き抜く
+    - name: Download latest data from GCS
+      run: |
+        mkdir -p data logs
+        gsutil cp gs://GCP_SA_KEY/processed_market_data.parquet data/ || echo "Parquet not found in GCS, using fallback."
+        gsutil cp gs://GCP_SA_KEY/stocks.db ./ || echo "SQLite DB not found in GCS, creating new."
 
-      # 🛠 3. gcloud/gsutil のセットアップ（追加するステップ）
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      # 📥 4. GCSバケットから最新データをCI環境に引き抜く（追加するステップ）
-      - name: Download latest data from GCS
-        run: |
-          mkdir -p data logs
-          # あなたのGCSバケット名（例: my-stock-bucket）に書き換えてください
-          gsutil cp gs://GCP_SA_KEY/processed_market_data.parquet data/ || echo "Parquet not found in GCS, using fallback."
-          gsutil cp gs://GCP_SA_KEY/stocks.db ./ || echo "SQLite DB not found in GCS, creating new."
-
-    # 4. パイプラインの実行（ビルド＆リリース実行）
+    # 7. パイプラインの実行（ビルド＆リリース実行）
     - name: Run AI Scout Pipeline
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -77,7 +65,19 @@ jobs:
         # 本番運用のため --release フラグで最適化ビルドして実行
         cargo run --release --bin ai_scout
 
-    # 5. 生成された成果物（CSVやログ）の永続化（GCS移行前の一時措置）
+    # 📤 8. Rustの処理が終わった後、最新データをGCSに送り返して保存する
+    - name: Upload latest data and logs to GCS
+      if: success() # Rustのステップが正常終了（Success）した場合のみ実行
+      run: |
+        gsutil cp data/processed_market_data.parquet gs://GCP_SA_KEY/processed_market_data.parquet
+        gsutil cp stocks.db gs://GCP_SA_KEY/stocks.db
+        
+        # もしログファイル（ai_scout_results.txt等）もクラウドにバックアップしたい場合
+        if [ -d "logs" ]; then
+          gsutil -m cp -r logs/* gs://GCP_SA_KEY/logs/
+        fi
+
+    # 9. 生成された成果物（CSVやログ）の永続化
     - name: Upload execution artifacts
       uses: actions/upload-artifact@v4
       with:
