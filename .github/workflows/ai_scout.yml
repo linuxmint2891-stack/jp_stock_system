@@ -50,13 +50,6 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
-    # 📥 6. GCSバケットから最新データをCI環境に引き抜く
-    - name: Download latest data from GCS
-      run: |
-        mkdir -p data logs
-        gsutil cp gs://GCP_SA_KEY/processed_market_data.parquet data/ || echo "Parquet not found in GCS, using fallback."
-        gsutil cp gs://GCP_SA_KEY/stocks.db ./ || echo "SQLite DB not found in GCS, creating new."
-
     # 7. パイプラインの実行（ビルド＆リリース実行）
     - name: Run AI Scout Pipeline
       env:
