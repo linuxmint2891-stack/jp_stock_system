@@ -65,17 +65,15 @@ jobs:
         # 本番運用のため --release フラグで最適化ビルドして実行
         cargo run --release --bin ai_scout
 
-    # 📤 8. Rustの処理が終わった後、最新データをGCSに送り返して保存する
-    - name: Upload latest data and logs to GCS
-      if: success() # Rustのステップが正常終了（Success）した場合のみ実行
+    # 📤 8. Rustの処理が終わった後、google　Mydriveに保存する
+    - name: Upload latest data to Google Drive
+      if: success()
+      env:
+        # 3ヶ月前に登録されている認証情報をRustに環境変数として渡す
+        GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS }}
       run: |
-        gsutil cp data/processed_market_data.parquet gs://GCP_SA_KEY/processed_market_data.parquet
-        gsutil cp stocks.db gs://GCP_SA_KEY/stocks.db
-        
-        # もしログファイル（ai_scout_results.txt等）もクラウドにバックアップしたい場合
-        if [ -d "logs" ]; then
-          gsutil -m cp -r logs/* gs://GCP_SA_KEY/logs/
-        fi
+        # マイドライブへアップロードするRustのバイナリを実行
+        cargo run --release --bin upload_drive
 
     # 9. 生成された成果物（CSVやログ）の永続化
     - name: Upload execution artifacts
