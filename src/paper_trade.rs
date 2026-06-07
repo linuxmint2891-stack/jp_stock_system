@@ -69,9 +69,10 @@ pub fn record_virtual_buy(
 pub fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
     let today_str = Local::now().format("%Y-%m-%d").to_string();
     
-    // 固定ルール（例：利確 +10%, 損切り -5%）
-    let target_profit_pct = 0.10;
-    let stop_loss_pct = -0.05;
+    // ⚙️ トレーリングストップのパラメータ設定
+    let trailing_trigger_pct = 0.05; // 5%以上の含み益でトレーリング発動
+    let trailing_drop_pct = 0.03;    // 最高値から3%下落したら利確
+    let absolute_stop_loss_pct = -0.05; // 購入価格から5%下落で絶対損切り
 
     // 現在の保有ポジションを全件取得
     let mut stmt = conn.prepare("SELECT code, entry_date, entry_price, qty, highest_price FROM active_positions")?;
@@ -86,7 +87,7 @@ pub fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
         let qty: i64 = row.get(3)?;
         let mut highest_price: f64 = row.get(4)?;
 
-        // OHLCテーブルから、この銘柄の「最新の終値」を取得する
+        // OHLCテーブルから、この銘柄の「最新の終値」を取得
         let latest_close: Option<f64> = conn.query_row(
             "SELECT close FROM OHLC WHERE code = ?1 ORDER BY date DESC LIMIT 1",
             [code.clone()],
@@ -94,7 +95,7 @@ pub fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
         ).optional()?;
 
         if let Some(current_price) = latest_close {
-            // 最高値の更新チェック
+            // 1. 最高値の更新チェック
             if current_price > highest_price {
                 highest_price = current_price;
                 conn.execute(
@@ -103,19 +104,34 @@ pub fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
                 )?;
             }
 
-            // 現在の損益率を計算
-            let pl_pct = (current_price - entry_price) / entry_price;
+            // 2. 各種損益率の計算
+            let current_pl_pct = (current_price - entry_price) / entry_price; // 購入原価からの損益率
+            let max_gain_pct = (highest_price - entry_price) / entry_price;   // これまでの最大利益率
+            let drop_from_peak_pct = (highest_price - current_price) / highest_price; // 最高値からの下落率
 
-            // 利確・損切りラインに達しているかチェック
-            if pl_pct >= target_profit_pct || pl_pct <= stop_loss_pct {
+            let mut is_exit = false;
+            let mut exit_reason = String::new();
+
+            // 3. 決済判定ロジック
+            if current_pl_pct <= absolute_stop_loss_pct {
+                // ① 絶対損切りラインに接触
+                is_exit = true;
+                exit_reason = "絶対損切り(-5%)".to_string();
+            } else if max_gain_pct >= trailing_trigger_pct && drop_from_peak_pct >= trailing_drop_pct {
+                // ② トレーリングストップ発動（5%以上上昇後、最高値から3%下落）
+                is_exit = true;
+                exit_reason = format!("トレーリングストップ利確(ピークから-{:.1}%)", trailing_drop_pct * 100.0);
+            }
+
+            // 4. 決済フラグが立ったら退避、そうでなければ現在値を更新して保有継続
+            if is_exit {
                 let pl_amount = (current_price - entry_price) * (qty as f64);
+                let final_pl_pct = current_pl_pct * 100.0;
                 
-                // ループ内でのDB削除を避けるため、一旦ベクタに退避
                 exits.push((
-                    code.clone(), entry_date, today_str.clone(), entry_price, current_price, qty, pl_amount, pl_pct * 100.0
+                    code.clone(), entry_date, today_str.clone(), entry_price, current_price, qty, pl_amount, final_pl_pct, exit_reason
                 ));
             } else {
-                // 保有継続の場合、現在の株価を更新
                 conn.execute(
                     "UPDATE active_positions SET current_price = ?1 WHERE code = ?2",
                     params![current_price, code],
@@ -126,9 +142,9 @@ pub fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
     drop(rows);
     drop(stmt);
 
-    // 決済処理（ポジション削除 ＆ 履歴へ挿入）
+    // 5. 決済処理の実行（保有削除 ＆ 履歴へ書き込み）
     for ex in exits {
-        println!("💥 [Paper Trade] 決済自動実行: {}（利益率: {:.2}%）", ex.0, ex.7);
+        println!("💥 [Paper Trade] 決済自動実行: {} | {}（最終損益: {:.2}%）", ex.0, ex.8, ex.7);
 
         // 1. 履歴へ追加
         conn.execute(
