@@ -5,24 +5,40 @@ use google_drive3::hyper_rustls;
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     // 1. OAuth2.0 認証 (ユーザーとしてログイン)
-    let secret = yup_oauth2::read_application_secret("client_secret.json")
-        .await
-        .expect("client_secret.jsonが見つかりません");
+    
+    // CI環境などで環境変数から直接読み込めるようにする
+    let secret = if let Ok(json) = std::env::var("GDRIVE_SECRET_JSON") {
+        println!("Using credentials from GDRIVE_SECRET_JSON environment variable");
+        yup_oauth2::parse_application_secret(json)?
+    } else {
+        yup_oauth2::read_application_secret("client_secret.json")
+            .await
+            .map_err(|e| anyhow::anyhow!("client_secret.json の読み込みに失敗しました: {}. ファイルが空か、形式が正しくない可能性があります。", e))?
+    };
 
-    // トークンを保存する場所 (次回からブラウザログイン不要にするため)
+    // トークンを保存する場所
+    // CI環境などで環境変数からトークンキャッシュを復元できるようにする
+    if let Ok(cache_json) = std::env::var("GDRIVE_TOKEN_CACHE") {
+        println!("Restoring tokencache.json from environment variable");
+        fs::write("tokencache.json", cache_json)?;
+    }
+
     let auth = InstalledFlowAuthenticator::builder(
         secret,
         InstalledFlowReturnMethod::HTTPRedirect,
     ).persist_tokens_to_disk("tokencache.json")
      .build()
-     .await
-     .unwrap();
+     .await?;
 
     // 🏆 【重要】ここで「ドライブのフル権限」を強制的に指定します
     let scopes = &["https://www.googleapis.com/auth/drive"];
-    auth.token(scopes).await.expect("認証に失敗しました");
+    
+    // 認証の試行。キャッシュがない場合は対話型になるためCIでは失敗する。
+    auth.token(scopes).await.map_err(|e| {
+        anyhow::anyhow!("認証に失敗しました: {}. CI環境の場合は tokencache.json が正しく提供されているか確認してください。", e)
+    })?;
 
     let connector = hyper_rustls::HttpsConnectorBuilder::new()
         .with_native_roots()
@@ -38,12 +54,18 @@ async fn main() {
     let file_path = "data/processed_market_data.parquet";
     let file_name = "processed_market_data.parquet";
 
-    // 自分のストレージ状況を確認 (今度は 15GB などの数値が出るはず)
+    if !std::path::Path::new(file_path).exists() {
+        println!("⚠️ アップロード対象ファイルが見つかりません: {}", file_path);
+        return Ok(());
+    }
+
+    // 自分のストレージ状況を確認
     let (_, about) = hub.about().get().add_scope(google_drive3::api::Scope::Full)
         .param("fields", "storageQuota")
-        .doit().await.unwrap();
+        .doit().await?;
+    
     if let Some(quota) = about.storage_quota.as_ref() {
-        println!("📊 あなたのストレージ状況: 使用量 {} / 全容量 {}", 
+        println!("📊 ストレージ状況: 使用量 {} / 全容量 {}", 
             quota.usage.unwrap_or(0),
             quota.limit.unwrap_or(0)
         );
@@ -53,29 +75,31 @@ async fn main() {
     let query = format!("name = '{}' and trashed = false", file_name);
     let (_, file_list) = hub.files().list().q(&query)
         .add_scope(google_drive3::api::Scope::Full)
-        .doit().await.unwrap();
+        .doit().await?;
+    
     let existing_file_id = file_list.files.and_then(|f| f.get(0).and_then(|f| f.id.clone()));
-
-    let file_data = fs::File::open(file_path).expect("data/test.json を用意してください");
+    let file_data = fs::File::open(file_path)?;
 
     match existing_file_id {
         Some(id) => {
-            println!("🔄 自分の容量を使って上書きします (ID: {})...", id);
+            println!("🔄 上書きアップロード中 (ID: {})...", id);
             hub.files().update(File::default(), &id)
                 .add_scope(google_drive3::api::Scope::Full)
-                .upload(file_data, "application/json".parse().unwrap())
-                .await.expect("上書き失敗");
+                .upload(file_data, "application/octet-stream".parse().unwrap())
+                .await?;
             println!("✅ 上書き成功！");
         },
         None => {
-            println!("🆕 自分の容量を使って新規作成します...");
+            println!("🆕 新規アップロード中...");
             let mut file_meta = File::default();
             file_meta.name = Some(file_name.to_string());
             hub.files().create(file_meta)
                 .add_scope(google_drive3::api::Scope::Full)
-                .upload(file_data, "application/json".parse().unwrap())
-                .await.expect("作成失敗");
+                .upload(file_data, "application/octet-stream".parse().unwrap())
+                .await?;
             println!("✅ 新規作成成功！");
         }
     }
+
+    Ok(())
 }

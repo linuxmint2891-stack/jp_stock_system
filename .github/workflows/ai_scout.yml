@@ -62,11 +62,16 @@ jobs:
     - name: Upload latest data to Google Drive
       if: success()
       env:
-        # 🔑 新しく作った「M_DRIVE_SECRET」からデータを流し込む
-        SECRET_JSON_DATA: ${{ secrets.M_DRIVE_SECRET }}
+        # 🔑 環境変数として直接渡すことで、書き出し時のパースエラー（EOF等）を回避します
+        GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
+        # 🔑 CI環境での認証維持のため、トークンキャッシュも環境変数から注入します
+        GDRIVE_TOKEN_CACHE: ${{ secrets.GDRIVE_TOKEN_CACHE }}
       run: |
-        # Rustが求めている「client_secret.json」として書き出す
-        echo "$SECRET_JSON_DATA" > client_secret.json
+        # 実行前にシークレットが設定されているか確認（デバッグ用、値自体は非表示）
+        if [ -z "$GDRIVE_SECRET_JSON" ]; then
+          echo "⚠️ M_DRIVE_SECRET is not set. Skipping upload."
+          exit 0
+        fi
         
         # マイドライブへアップロードするRustのバイナリを実行
         cargo run --release --bin upload_drive
