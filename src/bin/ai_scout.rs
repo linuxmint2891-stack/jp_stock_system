@@ -38,6 +38,10 @@ async fn main() -> Result<()> {
 
     println!("🚀 Starting Market Analysis with AI Scout (Ollama)...");
 
+    // SQLite接続の準備（ペーパートレード用）
+    let conn = rusqlite::Connection::open("stocks.db")?;
+    jp_stock_system::paper_trade::init_db_extended(&conn);
+
     let market_data_path = "data/processed_market_data.parquet";
     let master_data_path = "data/jpx_codes.csv";
     let yahoo_data_path = "data/yahoo_latest.csv";
@@ -248,6 +252,7 @@ async fn main() -> Result<()> {
                 // ペーパートレード台帳への記録 (スコア 0.70 以上)
                 if result.decision == "GO" && result.sentiment_score >= 0.70 {
                     if let Err(e) = jp_stock_system::paper_trade::record_virtual_buy(
+                        &conn,
                         code,
                         name,
                         price,
@@ -263,6 +268,15 @@ async fn main() -> Result<()> {
                 writeln!(log_file, "{}", err_msg)?;
             }
         }
+    }
+
+    // 6. ポートフォリオの評価と勝率の記録
+    println!("\n📈 ペーパートレードの評価更新を実行中...");
+    if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions(&conn) {
+        eprintln!("❌ ポートフォリオ評価中にエラーが発生: {}", e);
+    }
+    if let Err(e) = jp_stock_system::paper_trade::log_ai_win_rate(&conn) {
+        eprintln!("❌ 勝率ログ出力中にエラーが発生: {}", e);
     }
 
     Ok(())
