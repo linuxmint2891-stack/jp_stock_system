@@ -58,12 +58,12 @@ jobs:
         # 本番運用のため --release フラグで最適化ビルドして実行
         cargo run --release --bin ai_scout
 
-# 📤 8. Rustの処理が終わった後、最新データをGoogle ドライブに保存する
+    # 📤 8. Rustの処理が終わった後、最新データをGoogle ドライブに保存する
     - name: Upload latest data to Google Drive
       if: success()
       env:
-        # 🔑 使うSecretsを「GOOGLE_CREDENTIALS」から「GCP_SA_KEY」に変更してみる
-        SECRET_JSON_DATA: ${{ secrets.GCP_SA_KEY }}
+        # 🔑 新しく作った「M_DRIVE_SECRET」からデータを流し込む
+        SECRET_JSON_DATA: ${{ secrets.M_DRIVE_SECRET }}
       run: |
         # Rustが求めている「client_secret.json」として書き出す
         echo "$SECRET_JSON_DATA" > client_secret.json
