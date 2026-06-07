@@ -58,13 +58,16 @@ jobs:
         # 本番運用のため --release フラグで最適化ビルドして実行
         cargo run --release --bin ai_scout
 
-    # 📤 8. Rustの処理が終わった後、google　Mydriveに保存する
+# 📤 8. Rustの処理が終わった後、最新データをGoogle ドライブに保存する
     - name: Upload latest data to Google Drive
       if: success()
       env:
-        # 3ヶ月前に登録されている認証情報をRustに環境変数として渡す
-        GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS }}
+        # Secretsの中身を環境変数に一時的に入れる
+        SECRET_JSON_DATA: ${{ secrets.GOOGLE_CREDENTIALS }}
       run: |
+        # 🔑 Rustが求めている「client_secret.json」をその場に物理ファイルとして書き出す
+        echo "$SECRET_JSON_DATA" > client_secret.json
+        
         # マイドライブへアップロードするRustのバイナリを実行
         cargo run --release --bin upload_drive
 
