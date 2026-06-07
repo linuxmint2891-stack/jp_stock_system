@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use serde_json::json;
+use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SentimentResult {
@@ -80,7 +81,10 @@ mod tests {
 
 /// プロンプトをGemma 3に送信し、JSON形式で結果を取得する
 pub async fn analyze_news_with_gemma(prompt: &str) -> Result<SentimentResult, Box<dyn std::error::Error>> {
-    let client = Client::new();
+    // 💡 タイムアウトを5分（300秒）に拡張したタフなクライアントを作る
+    let client = Client::builder()
+        .timeout(Duration::from_secs(300))
+        .build()?;
     
     // 環境変数 OLLAMA_URL があればそれを使う。なければデフォルト
     let base_url = std::env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
@@ -93,7 +97,8 @@ pub async fn analyze_news_with_gemma(prompt: &str) -> Result<SentimentResult, Bo
         "stream": false,
         "format": "json", // OllamaにJSON出力を強制させるモード
         "options": {
-            "temperature": 0.0
+            "temperature": 0.0,
+            "num_predict": 512 // 💡 出力トークン数を制限して、CPUの無駄な暴走・遅延を防ぐ（保険）
         }
     });
 
