@@ -272,10 +272,10 @@ async fn main() -> Result<()> {
 
     // 6. ポートフォリオの評価と勝率の記録
     println!("\n📈 ペーパートレードの評価更新を実行中...");
-    if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions(&conn) {
+    if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions(&conn).await {
         eprintln!("❌ ポートフォリオ評価中にエラーが発生: {}", e);
     }
-    if let Err(e) = jp_stock_system::paper_trade::log_ai_win_rate(&conn) {
+    if let Err(e) = jp_stock_system::paper_trade::log_ai_win_rate(&conn).await {
         eprintln!("❌ 勝率ログ出力中にエラーが発生: {}", e);
     }
 

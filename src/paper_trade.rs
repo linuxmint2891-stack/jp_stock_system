@@ -66,7 +66,7 @@ pub fn record_virtual_buy(
 }
 
 /// 保有中ポジションの最新株価更新 ＆ 利確・損切りの自動答え合わせ
-pub fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
+pub async fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
     let today_str = Local::now().format("%Y-%m-%d").to_string();
     
     // ⚙️ トレーリングストップのパラメータ設定
@@ -156,14 +156,17 @@ pub fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
         )?;
 
         // 2. 保有から削除
-        conn.execute("DELETE FROM active_positions WHERE code = ?1", [ex.0])?;
+        conn.execute("DELETE FROM active_positions WHERE code = ?1", [ex.0.clone()])?;
+
+        // 💡 追記: 決済をDiscordへ通知
+        let _ = crate::api::discord::notify_trade_exit(&ex.0, &ex.0, ex.3, ex.4, ex.7, &ex.8).await;
     }
 
     Ok(())
 }
 
 /// AI判定の通算勝率を計算してテキスト表示する
-pub fn log_ai_win_rate(conn: &Connection) -> rusqlite::Result<()> {
+pub async fn log_ai_win_rate(conn: &Connection) -> rusqlite::Result<()> {
     let total_trades: i64 = conn.query_row("SELECT COUNT(*) FROM trade_history", [], |r| r.get(0))?;
     
     if total_trades == 0 {
@@ -182,6 +185,9 @@ pub fn log_ai_win_rate(conn: &Connection) -> rusqlite::Result<()> {
     println!("  勝率         : {:.2} % （{}勝 / {}敗）", win_rate, win_trades, total_trades - win_trades);
     println!("  通算仮想損益 : {:.0} 円", total_pl);
     println!("==================================================");
+
+    // 💡 追記: 通算成績をDiscordへ通知
+    let _ = crate::api::discord::notify_performance_report(total_trades, win_trades, win_rate, total_pl).await;
 
     Ok(())
 }
