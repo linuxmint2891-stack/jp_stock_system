@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
 
     // SQLite接続の準備（ペーパートレード用）
     let conn = rusqlite::Connection::open("stocks.db")?;
-    jp_stock_system::paper_trade::init_db_extended(&conn);
+    jp_stock_system::paper_trade::init_db_extended(&conn)?;
 
     let market_data_path = "data/processed_market_data.parquet";
     let master_data_path = "data/jpx_codes.csv";

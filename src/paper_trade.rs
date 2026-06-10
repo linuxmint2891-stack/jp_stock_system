@@ -3,9 +3,9 @@ use chrono::Local;
 use polars::prelude::DataFrame;
 
 /// DBの初期化（仮想トレード用テーブルを追加拡張）
-pub fn init_db_extended(conn: &Connection) {
+pub fn init_db_extended(conn: &Connection) -> rusqlite::Result<()> {
     // 既存のOHLCテーブル作成（db::sqlite::init_db を想定）
-    crate::db::sqlite::init_db(conn);
+    crate::db::sqlite::init_db(conn)?;
 
     // 1. 現在保有中の仮想ポジションを管理するテーブル
     conn.execute(
@@ -19,8 +19,8 @@ pub fn init_db_extended(conn: &Connection) {
             current_price REAL
         )
         ",
-        []
-    ).unwrap();
+        [],
+    )?;
 
     // 2. 決済が完了したトレードの履歴（勝率計算用）
     conn.execute(
@@ -37,8 +37,9 @@ pub fn init_db_extended(conn: &Connection) {
             profit_loss_pct REAL  -- 損益率（%）
         )
         ",
-        []
-    ).unwrap();
+        [],
+    )?;
+    Ok(())
 }
 
 /// AIが「GO」を出した銘柄を仮想購入（新規ポジション建て）

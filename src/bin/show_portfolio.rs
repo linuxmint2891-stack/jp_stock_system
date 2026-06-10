@@ -10,6 +10,7 @@ async fn main() -> Result<()> {
 
     // SQLite接続の準備
     let conn = Connection::open("stocks.db")?;
+    paper_trade::init_db_extended(&conn)?;
 
     // 1. 市場データがある場合は、最新価格で評価損益を更新
     let market_data_path = "data/processed_market_data.parquet";
