@@ -20,16 +20,23 @@ async fn main() -> anyhow::Result<()> {
     println!("🚀 Starting Hybrid Incremental Data Sync (J-Quants + Yahoo Finance)...");
 
     // 1. 既存の Parquet から最新日付を取得
-    let mut last_date = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+    let mut last_date = NaiveDate::from_ymd_opt(2024, 3, 19).unwrap();
 
     if Path::new(PARQUET_PATH).exists() {
-        let df_last = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?
+        if let Ok(df_last) = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?
             .select([col("Date").max()])
-            .collect()?;
-        
-        if let Some(date_val) = df_last.column("Date")?.get(0)?.get_str() {
-            last_date = NaiveDate::parse_from_str(date_val, "%Y-%m-%d")?;
-            println!("📅 Last date in Parquet: {}", last_date);
+            .collect() 
+        {
+            if let Ok(series) = df_last.column("Date") {
+                if let Ok(ca) = series.str() {
+                    if let Some(date_val) = ca.get(0) {
+                        if let Ok(parsed_date) = NaiveDate::parse_from_str(date_val, "%Y-%m-%d") {
+                            last_date = parsed_date;
+                            println!("📅 Last date in Parquet: {}", last_date);
+                        }
+                    }
+                }
+            }
         }
     }
 
