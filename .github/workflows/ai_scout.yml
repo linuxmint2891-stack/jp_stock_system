@@ -61,24 +61,26 @@ jobs:
         GOOGLE_APPLICATION_CREDENTIALS: "client_secret.json"
         GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.M_DRIVE_SECRET }}
       run: |
-        # ① GitHub Secrets から本物の JSON 中身を client_secret.json として書き出す
-        echo '${{ secrets.M_DRIVE_SECRET }}' > client_secret.json
-        
+        # ① GitHub Secrets から本物の JSON 中身を無傷で書き出す (ヒアドキュメントを使用)
+        cat << 'EOF' > client_secret.json
+        ${{ secrets.M_DRIVE_SECRET }}
+        EOF
+
         mkdir -p data
         mkdir -p logs
-        
+
         # ② Googleドライブから最新の Parquet 台帳をダウンロード
         echo "📥 Downloading baseline data from Google Drive..."
         cargo run --release --bin download_drive
-        
+
         # ③ 最新価格の超軽量同期 (デイリーモード)
         echo "🚀 Syncing latest market data..."
         cargo run --release --bin sync_yahoo
-        
+
         # ④ AI分析実行
         echo "🧠 Running AI Scout analysis..."
         cargo run --release --bin ai_scout
-        
+
         # 使い終わった認証ファイルを削除
         rm -f client_secret.json
 
@@ -91,9 +93,11 @@ jobs:
         GDRIVE_SECRET_JSON: "client_secret.json"
       run: |
         if [ -n "${{ secrets.M_DRIVE_SECRET }}" ]; then
-          # アップロード時もファイルに復元
-          echo '${{ secrets.M_DRIVE_SECRET }}' > client_secret.json
-          
+          # アップロード時もヒアドキュメントで安全に書き出し
+          cat << 'EOF' > client_secret.json
+          ${{ secrets.M_DRIVE_SECRET }}
+          EOF
+
           # マイドライブへ最新のParquetファイルをアップロード（上書き）
           cargo run --release --bin upload_drive
 
@@ -101,6 +105,7 @@ jobs:
         else
           echo "⚠️ M_DRIVE_SECRET is not set. Skipping upload."
         fi
+
 
     # 9. 生成された成果物（CSVやログ）の永続化
     - name: Upload execution artifacts
