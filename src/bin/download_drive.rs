@@ -8,8 +8,12 @@ use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // 1. OAuth2.0 認証
-    let secret = if let Ok(json) = std::env::var("GDRIVE_SECRET_JSON") {
-        yup_oauth2::parse_application_secret(json)?
+    let secret = if let Ok(val) = std::env::var("GDRIVE_SECRET_JSON") {
+        if val.trim().starts_with('{') {
+            yup_oauth2::parse_application_secret(val)?
+        } else {
+            yup_oauth2::read_application_secret(val).await?
+        }
     } else {
         yup_oauth2::read_application_secret("client_secret.json").await?
     };

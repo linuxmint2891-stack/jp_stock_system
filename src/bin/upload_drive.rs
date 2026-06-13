@@ -9,9 +9,15 @@ async fn main() -> anyhow::Result<()> {
     // 1. OAuth2.0 認証 (ユーザーとしてログイン)
     
     // CI環境などで環境変数から直接読み込めるようにする
-    let secret = if let Ok(json) = std::env::var("GDRIVE_SECRET_JSON") {
-        println!("Using credentials from GDRIVE_SECRET_JSON environment variable");
-        yup_oauth2::parse_application_secret(json)?
+    // (JSON文字列そのもの、またはファイルパスの両方に対応)
+    let secret = if let Ok(val) = std::env::var("GDRIVE_SECRET_JSON") {
+        if val.trim().starts_with('{') {
+            println!("Using raw JSON from GDRIVE_SECRET_JSON environment variable");
+            yup_oauth2::parse_application_secret(val)?
+        } else {
+            println!("Reading credentials from file specified in GDRIVE_SECRET_JSON: {}", val);
+            yup_oauth2::read_application_secret(val).await?
+        }
     } else {
         yup_oauth2::read_application_secret("client_secret.json")
             .await

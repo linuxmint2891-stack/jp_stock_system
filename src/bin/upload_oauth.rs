@@ -25,9 +25,17 @@ async fn main() -> anyhow::Result<()> {
     let file_name = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("upload_file");
 
     // 2. OAuth2.0 認証
-    let secret = yup_oauth2::read_application_secret("client_secret.json")
-        .await
-        .expect("client_secret.jsonが見つかりません");
+    let secret = if let Ok(val) = std::env::var("GDRIVE_SECRET_JSON") {
+        if val.trim().starts_with('{') {
+            yup_oauth2::parse_application_secret(val)?
+        } else {
+            yup_oauth2::read_application_secret(val).await?
+        }
+    } else {
+        yup_oauth2::read_application_secret("client_secret.json")
+            .await
+            .expect("client_secret.jsonが見つかりません")
+    };
 
     let auth = InstalledFlowAuthenticator::builder(
         secret,
