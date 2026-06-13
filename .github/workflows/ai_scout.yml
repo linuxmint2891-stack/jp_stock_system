@@ -57,7 +57,13 @@ jobs:
         # 🔑 Googleドライブ接続用のシークレット
         GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
         GDRIVE_TOKEN_CACHE: ${{ secrets.GDRIVE_TOKEN_CACHE }}
+        # 🔑 Google公式ライブラリや一部のRustクレートが自動で読み込む環境変数名もセット
+        GOOGLE_APPLICATION_CREDENTIALS: "client_secret.json"
+        GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.M_DRIVE_SECRET }}
       run: |
+        # プログラムが「client_secret.jsonというファイル」を直接求める場合に備えて一時的に書き出し
+        echo '${{ secrets.M_DRIVE_SECRET }}' > client_secret.json
+        
         mkdir -p data
         mkdir -p logs
         
@@ -72,6 +78,9 @@ jobs:
         # ③ AI分析実行
         echo "🧠 Running AI Scout analysis..."
         cargo run --release --bin ai_scout
+        
+        # 使い終わったシークレットファイルを削除
+        rm -f client_secret.json
 
     # 📤 8. 最新データをGoogle ドライブに保存・同期
     - name: Upload updated data back to Google Drive
