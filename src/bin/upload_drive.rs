@@ -15,13 +15,28 @@ async fn main() -> anyhow::Result<()> {
             println!("Using raw JSON from GDRIVE_SECRET_JSON environment variable");
             yup_oauth2::parse_application_secret(val)?
         } else {
+            let path = std::path::Path::new(&val);
+            if !path.exists() {
+                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが見つかりません: {}", val);
+            }
+            if std::fs::metadata(path)?.len() == 0 {
+                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが空です: {}", val);
+            }
             println!("Reading credentials from file specified in GDRIVE_SECRET_JSON: {}", val);
             yup_oauth2::read_application_secret(val).await?
         }
     } else {
-        yup_oauth2::read_application_secret("client_secret.json")
+        let default_path = "client_secret.json";
+        let path = std::path::Path::new(default_path);
+        if !path.exists() {
+            anyhow::bail!("client_secret.json が見つかりません。環境変数 GDRIVE_SECRET_JSON を設定するか、ファイルを用意してください。");
+        }
+        if std::fs::metadata(path)?.len() == 0 {
+            anyhow::bail!("client_secret.json が空です。GitHub Secrets の設定を確認してください。");
+        }
+        yup_oauth2::read_application_secret(default_path)
             .await
-            .map_err(|e| anyhow::anyhow!("client_secret.json の読み込みに失敗しました: {}. ファイルが空か、形式が正しくない可能性があります。", e))?
+            .map_err(|e| anyhow::anyhow!("client_secret.json の読み込みに失敗しました: {}. 形式が正しくない可能性があります。", e))?
     };
 
     // トークンを保存する場所

@@ -29,12 +29,25 @@ async fn main() -> anyhow::Result<()> {
         if val.trim().starts_with('{') {
             yup_oauth2::parse_application_secret(val)?
         } else {
+            let path = std::path::Path::new(&val);
+            if !path.exists() {
+                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが見つかりません: {}", val);
+            }
+            if std::fs::metadata(path)?.len() == 0 {
+                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが空です: {}", val);
+            }
             yup_oauth2::read_application_secret(val).await?
         }
     } else {
-        yup_oauth2::read_application_secret("client_secret.json")
-            .await
-            .expect("client_secret.jsonが見つかりません")
+        let default_path = "client_secret.json";
+        let path = std::path::Path::new(default_path);
+        if !path.exists() {
+            anyhow::bail!("client_secret.json が見つかりません。環境変数 GDRIVE_SECRET_JSON を設定するか、ファイルを用意してください。");
+        }
+        if std::fs::metadata(path)?.len() == 0 {
+            anyhow::bail!("client_secret.json が空です。GitHub Secrets の設定を確認してください。");
+        }
+        yup_oauth2::read_application_secret(default_path).await?
     };
 
     let auth = InstalledFlowAuthenticator::builder(
