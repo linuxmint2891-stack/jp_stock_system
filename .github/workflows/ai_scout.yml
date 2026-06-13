@@ -57,24 +57,23 @@ jobs:
         GDRIVE_TOKEN_CACHE: ${{ secrets.GDRIVE_TOKEN_CACHE }}
         # 🔑 【重要】バイナリ側でパスとして解釈させるためファイル名を指定
         GDRIVE_SECRET_JSON: "client_secret.json"
-        # 🔑 複数のシークレット名を試行して、どれかが入っていればそれを使う
-        RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET || secrets.GDRIVE_SECRET_JSON || secrets.GDRIVE_SECRET }}
+        # 🔑 シークレットの本体
+        RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
       run: |
         # ① シークレットが空でないか確認
         if [ -z "$RAW_SECRET_DATA" ]; then
-          echo "❌ Error: Google Drive secret (M_DRIVE_SECRET) is empty or not set in GitHub Secrets."
-          echo "Please ensure you have set M_DRIVE_SECRET in your repository settings."
+          echo "❌ Error: M_DRIVE_SECRET is not set in GitHub Secrets."
+          echo "GitHubリポジトリの Settings > Secrets and variables > Actions で"
+          echo "M_DRIVE_SECRET を設定してください。"
           exit 1
         fi
 
-        # ② GitHub Secrets から本物の JSON 中身を無傷で書き出す
-        cat << 'EOF' > client_secret.json
-        $RAW_SECRET_DATA
-        EOF
+        # ② 本物の JSON 中身を client_secret.json として書き出す
+        echo "$RAW_SECRET_DATA" > client_secret.json
 
-        # 書き出したファイルが空でないか最終確認
-        if [ ! -s client_secret.json ]; then
-          echo "❌ Error: client_secret.json was written as an empty file."
+        # 書き出したファイルが空でないか、JSONとして開始されているか簡易チェック
+        if [[ $(head -c 1 client_secret.json) != "{" ]]; then
+          echo "❌ Error: client_secret.json does not start with '{'. Secret might be invalid."
           exit 1
         fi
 
@@ -102,22 +101,18 @@ jobs:
       env:
         GDRIVE_TOKEN_CACHE: ${{ secrets.GDRIVE_TOKEN_CACHE }}
         GDRIVE_SECRET_JSON: "client_secret.json"
-        RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET || secrets.GDRIVE_SECRET_JSON || secrets.GDRIVE_SECRET }}
+        RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
       run: |
         if [ -n "$RAW_SECRET_DATA" ]; then
-          # アップロード時もヒアドキュメントで安全に書き出し
-          cat << 'EOF' > client_secret.json
-          $RAW_SECRET_DATA
-          EOF
+          echo "$RAW_SECRET_DATA" > client_secret.json
 
           # マイドライブへ最新のParquetファイルをアップロード（上書き）
           cargo run --release --bin upload_drive
 
           rm -f client_secret.json
         else
-          echo "⚠️ Skipping upload because secret is not set."
+          echo "⚠️ Skipping upload because M_DRIVE_SECRET is not set."
         fi
-
     # 9. 生成された成果物（CSVやログ）の永続化
     - name: Upload execution artifacts
       uses: actions/upload-artifact@v4
