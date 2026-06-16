@@ -200,7 +200,9 @@ async fn main() -> Result<()> {
     // ※今回は簡略化のため、取得したニュースを直接ループ内で参照するようにします
     let mut news_map = std::collections::HashMap::new();
     for n in real_news {
-        news_map.insert(n.code, n.news_text);
+        // キーを4桁に標準化して格納
+        let clean_key = if n.code.len() > 4 { &n.code[0..4] } else { &n.code };
+        news_map.insert(clean_key.to_string(), n.news_text);
     }
 
     println!("\n✨ 【Scout: 上昇トレンドの注目銘柄 (対象日: {})】", latest_date_str);
@@ -220,9 +222,14 @@ async fn main() -> Result<()> {
         let price = prices.get(i).unwrap_or(0.0);
         let change = changes.get(i).unwrap_or(0.0);
         
-        // 最新ニュースがあればそれを使う、なければ空文字
-        // news_map のキーも raw_code (元のCode) であることに注意
-        let news_text = news_map.get(raw_code).map(|s| s.as_str()).unwrap_or("");
+        // 最新ニュースがあればそれを使う、なければ空文字 (4桁キーで検索)
+        let news_text = news_map.get(code).map(|s| s.as_str()).unwrap_or("");
+        
+        if news_text.is_empty() {
+            println!("🔍 Debug: コード {} ({}) のニュースは news_map に見つかりませんでした。", code, raw_code);
+        } else {
+            println!("🔍 Debug: コード {} のニュースを取得しました (文字数: {})", code, news_text.len());
+        }
 
         let header = format!("\n--- [銘柄分析] {} {} (価格: {}円, 前日比: {:.2}%) ---", code, name, price, change);
         println!("{}", header);

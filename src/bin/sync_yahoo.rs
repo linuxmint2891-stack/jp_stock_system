@@ -217,7 +217,13 @@ async fn fetch_yahoo_bulk(client: &reqwest::Client, symbols: &[String]) -> anyho
     if let Some(quotes) = res["quoteResponse"]["result"].as_array() {
         for quote in quotes {
             let symbol = quote["symbol"].as_str().unwrap_or("");
-            let code = symbol.replace(".T", "");
+            let mut code = symbol.replace(".T", "");
+            
+            // J-Quantsの5桁形式（末尾0）に合わせる
+            if code.len() == 4 {
+                code.push('0');
+            }
+
             let price = quote["regularMarketPrice"].as_f64().unwrap_or(0.0);
             let volume = quote["regularMarketVolume"].as_f64().unwrap_or(0.0);
             if !code.is_empty() && price > 0.0 {

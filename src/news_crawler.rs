@@ -51,8 +51,14 @@ pub async fn fetch_real_news_for_codes(codes: &[String]) -> Vec<NewsData> {
 
                     // ニュースが取得できていれば格納
                     if !combined_news.trim().is_empty() {
+                        let mut final_code = raw_code.clone();
+                        // 5桁形式（末尾0）に統一してマージの失敗を防ぐ
+                        if final_code.len() == 4 {
+                            final_code.push('0');
+                        }
+
                         results.push(NewsData {
-                            code: raw_code.clone(), // 元の5桁コードで格納（マージ用キー）
+                            code: final_code, 
                             news_text: combined_news,
                         });
                     } else {
