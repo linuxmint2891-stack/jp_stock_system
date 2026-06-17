@@ -16,9 +16,10 @@ pub struct SentimentResult {
 pub fn apply_guardrail(mut res: SentimentResult) -> SentimentResult {
     // 固有材料が「ない（false）」と判定されている場合
     if !res.has_distinct_material {
-        // AIのスコアがどうあれ、強制的にNO-GOライン（0.30以下）に固定
-        if res.sentiment_score > 0.30 {
-            res.sentiment_score = 0.30;
+        // AIのスコアがどうあれ、強制的にNO-GOライン（0.45以下）に固定
+        // (以前は0.30だったが、将来の監視対象を識別しやすくするため0.45まで緩和)
+        if res.sentiment_score > 0.45 {
+            res.sentiment_score = 0.45;
         }
         res.decision = "NO-GO".to_string();
         
@@ -55,9 +56,9 @@ mod tests {
 
         let result = apply_guardrail(mock_ai_response);
 
-        // ガードレールにより、強制的にGO判定が却下され、スコアが落とされていること
+        // ガードレールにより、強制的にGO判定が却下され、スコアが 0.45 以下に落とされていること
         assert_eq!(result.decision, "NO-GO");
-        assert!(result.sentiment_score <= 0.30);
+        assert!(result.sentiment_score <= 0.45);
         assert!(result.reasons[0].contains("[Guardrail Triggered"));
     }
 
