@@ -3,11 +3,23 @@ use anyhow::Result;
 use jp_stock_system::api::approver::TradeApprover;
 use std::fs::OpenOptions;
 use std::io::Write;
-use chrono::Local;
+use chrono::{Local, Timelike, Utc, FixedOffset};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
+
+    // 🚨 朝 8:55 を過ぎてジョブが動いた場合は、危険なので強制停止する（FORCE_RUN環境変数が設定されている場合はスキップ）
+    let jst_offset = FixedOffset::east_opt(9 * 3600).unwrap();
+    let now = Utc::now().with_timezone(&jst_offset);
+    let force_run = std::env::var("FORCE_RUN").is_ok();
+    if !force_run && (now.hour() >= 9 || (now.hour() == 8 && now.minute() >= 55)) {
+        println!("🛑 [🚨緊急停止ガードレール発動] 現在時刻は JST {} です。", now.format("%H:%M:%S"));
+        println!("朝 8:55 までの事前予約に間に合わなかったため、本日の自動売買は安全のためにスキップします。");
+        println!("（テスト等で強制実行したい場合は、環境変数 FORCE_RUN=true を指定してください）");
+        std::process::exit(0);
+    }
+    println!("🟢 時間内（JST {}）の起動を確認。証券会社へ予約注文を送信します...", now.format("%H:%M:%S"));
     let discord_webhook_url = std::env::var("DISCORD_WEBHOOK_URL").ok();
     let discord_bot_token = std::env::var("DISCORD_BOT_TOKEN").ok();
     let discord_channel_id = std::env::var("DISCORD_CHANNEL_ID").ok();

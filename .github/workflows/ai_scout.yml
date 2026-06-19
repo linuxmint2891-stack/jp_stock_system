@@ -2,8 +2,8 @@ name: AI Scout Daily Automation
 
 on:
   schedule:
-    # 毎日日本時間 15:15 (UTC 06:15) に実行
-    - cron: '15 6 * * 1-5'
+    # 日本時間 朝 8:15 (UTC 前日 23:15) に実行 (月曜〜金曜 JST に対応するよう UTC 日曜〜木曜 0-4 に設定)
+    - cron: '15 23 * * 0-4'
   workflow_dispatch: # 手動トリガー
 
 env:
