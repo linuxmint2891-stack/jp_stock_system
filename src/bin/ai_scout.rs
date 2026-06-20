@@ -54,6 +54,12 @@ async fn main() -> Result<()> {
     let conn = rusqlite::Connection::open("stocks.db")?;
     jp_stock_system::paper_trade::init_db_extended(&conn)?;
 
+    // 1. 【約定フェーズ】前日の予約注文（PENDING_BUY, PENDING_SELL）を本日の始値(Open)ベースで約定させる
+    println!("\n📥 [約定フェーズ] 予約注文の約定処理を実行中...");
+    if let Err(e) = jp_stock_system::paper_trade::execute_pending_orders(&conn).await {
+        eprintln!("❌ 予約注文の約定処理中にエラーが発生: {}", e);
+    }
+
     let market_data_path = "data/processed_market_data.parquet";
     let master_data_path = "data/jpx_codes.csv";
     let yahoo_data_path = "data/yahoo_latest.csv";

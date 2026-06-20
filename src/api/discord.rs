@@ -187,3 +187,71 @@ pub async fn notify_performance_report(
     client.post(&webhook_url).json(&payload).send().await?;
     Ok(())
 }
+
+/// 🛒 注文の約定（買い・売り）をDiscordに通知する
+pub async fn notify_order_execution(
+    code: &str,
+    is_buy: bool,
+    price: f64,
+    qty: i64,
+    pl_amount: Option<f64>,
+    pl_pct: Option<f64>,
+) -> Result<(), reqwest::Error> {
+    let webhook_url = match env::var("DISCORD_WEBHOOK_URL") {
+        Ok(url) => url,
+        Err(_) => return Ok(()),
+    };
+
+    let title = if is_buy {
+        format!("🛒 【買い約定】 銘柄: {}", code)
+    } else {
+        format!("💰 【売り約定】 銘柄: {}", code)
+    };
+
+    let color = if is_buy {
+        3066993 // 緑色 (Hex: #2ecc71)
+    } else {
+        let pl = pl_amount.unwrap_or(0.0);
+        if pl >= 0.0 {
+            3447003 // 青色系 (Hex: #3498db)
+        } else {
+            15158332 // 赤色系 (Hex: #e74c3c)
+        }
+    };
+
+    let mut fields = vec![
+        EmbedField {
+            name: "約定価格".to_string(),
+            value: format!("{:.1} 円", price),
+            inline: true,
+        },
+        EmbedField {
+            name: "数量".to_string(),
+            value: format!("{} 株", qty),
+            inline: true,
+        },
+    ];
+
+    if let (Some(pl), Some(pct)) = (pl_amount, pl_pct) {
+        fields.push(EmbedField {
+            name: "実現損益".to_string(),
+            value: format!("{:.0} 円 ({:.2}%)", pl, pct),
+            inline: false,
+        });
+    }
+
+    let payload = DiscordWebhookPayload {
+        username: "株AIスカウトシステム".to_string(),
+        avatar_url: None,
+        embeds: vec![DiscordEmbed {
+            title,
+            description: "予約注文が当日の始値で約定されました。".to_string(),
+            color,
+            fields,
+        }],
+    };
+
+    let client = reqwest::Client::new();
+    client.post(&webhook_url).json(&payload).send().await?;
+    Ok(())
+}
