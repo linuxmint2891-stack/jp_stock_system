@@ -50,6 +50,7 @@ jobs:
         GDRIVE_SECRET_JSON: "client_secret.json"
         # 🔑 シークレットの本体
         RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: |
         # ① シークレットが空でないか確認
         if [ -z "$RAW_SECRET_DATA" ]; then
