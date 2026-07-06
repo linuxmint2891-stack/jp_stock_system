@@ -3,7 +3,9 @@ name: AI Scout Daily Automation
 on:
   schedule:
     # 日本時間 朝 8:15 (UTC 前日 23:15) に実行 (月曜〜金曜 JST に対応するよう UTC 日曜〜木曜 0-4 に設定)
-    - cron: '15 23 * * 0-4'
+   #  - cron: '15 23 * * 0-4'
+    # 毎日 日本時間 朝 7:45 (UTC 前日 22:45) に実行するように前倒し
+    - cron: '45 22 * * *'
   workflow_dispatch: # 手動トリガー
 
 env:
@@ -28,34 +30,18 @@ jobs:
 
     - name: Rust Cache
       uses: swatinem/rust-cache@v2
-      
-    # 2. CI環境（Ubuntu）に Ollama をインストールしてバックグラウンド起動
-    - name: Install and Start Ollama
-      run: |
-        curl -fsSL https://ollama.com/install.sh | sh
-        # バックグラウンドでサーバーを起動し、起動を少し待つ
-        ollama serve &
-        sleep 5
-        # 必要なモデル（Gemma 3）をローカル環境にプル
-        ollama pull gemma3:latest
 
-    # 3. LLM コマンドラインツール（llm）とプラグインのセットアップ
-    - name: Install LLM CLI & Plugins
-      run: |
-        pipx install llm
-        llm install llm-ollama
-        
-    # 🔑 4. Google Cloud の認証を通す
+    # 🔑 2. Google Cloud の認証を通す
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    # 🛠 5. gcloud/gsutil のセットアップ
+    # 🛠 3. gcloud/gsutil のセットアップ
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
-    # 7. パイプラインの実行（データ同期 & AI分析）
+    # 4. パイプラインの実行（データ同期 & AI分析）
     - name: Run AI Scout Pipeline
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -100,7 +86,7 @@ jobs:
         # 使い終わった認証ファイルを削除
         rm -f client_secret.json
 
-    # 📤 8. 最新データをGoogle ドライブに保存・同期
+    # 📤 5. 最新データをGoogle ドライブに保存・同期
     - name: Upload updated data back to Google Drive
       if: success()
       env:
@@ -118,7 +104,7 @@ jobs:
         else
           echo "⚠️ Skipping upload because M_DRIVE_SECRET is not set."
         fi
-    # 9. 生成された成果物（CSVやログ）の永続化
+    # 6. 生成された成果物（CSVやログ）の永続化
     - name: Upload execution artifacts
       uses: actions/upload-artifact@v4
       with:
