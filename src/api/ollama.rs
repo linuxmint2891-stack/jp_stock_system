@@ -80,43 +80,64 @@ mod tests {
     }
 }
 
-/// プロンプトをGemma 3に送信し、JSON形式で結果を取得する
+/// プロンプトをGemini APIに送信し、JSON形式で結果を取得する
 pub async fn analyze_news_with_gemma(prompt: &str) -> Result<SentimentResult, Box<dyn std::error::Error>> {
-    // 💡 タイムアウトを5分（300秒）に拡張したタフなクライアントを作る
     let client = Client::builder()
-        .timeout(Duration::from_secs(300))
+        .timeout(Duration::from_secs(60))
         .build()?;
-    
-    // 環境変数 OLLAMA_URL があればそれを使う。なければデフォルト
-    let base_url = std::env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
-    let url = format!("{}/api/generate", base_url);
 
-    // Ollama API へのリクエストペイロード
+    let api_key = std::env::var("GEMINI_API_KEY")
+        .or_else(|_| std::env::var("GOOGLE_API_KEY"))
+        .map_err(|_| "Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set")?;
+
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={}",
+        api_key
+    );
+
     let payload = json!({
-        "model": "gemma3:latest",
-        "prompt": prompt,
-        "stream": false,
-        "format": "json", // OllamaにJSON出力を強制させるモード
-        "options": {
-            "temperature": 0.0,
-            "num_predict": 512 // 💡 出力トークン数を制限して、CPUの無駄な暴走・遅延を防ぐ（保険）
+        "contents": [{
+            "parts": [{
+                "text": prompt
+            }]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "OBJECT",
+                "properties": {
+                    "has_distinct_material": { "type": "BOOLEAN" },
+                    "sentiment_score": { "type": "NUMBER" },
+                    "reasons": {
+                        "type": "ARRAY",
+                        "items": { "type": "STRING" }
+                    },
+                    "risk_factor": { "type": "STRING" },
+                    "decision": { "type": "STRING" }
+                },
+                "required": ["has_distinct_material", "sentiment_score", "reasons", "risk_factor", "decision"]
+            },
+            "temperature": 0.0
         }
     });
 
-    // 送信
-    let response = client.post(url)
+    let response = client.post(&url)
         .json(&payload)
         .send()
         .await?;
 
+    if !response.status().is_success() {
+        let status = response.status();
+        let err_text = response.text().await?;
+        return Err(format!("Gemini API error ({}): {}", status, err_text).into());
+    }
+
     let response_json: serde_json::Value = response.json().await?;
     
-    // 生成されたレスポンスのテキスト部分を抽出
-    let raw_response = response_json["response"]
+    let raw_response = response_json["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
-        .ok_or("Failed to get response text from Ollama")?;
+        .ok_or("Failed to get response text from Gemini API response")?;
 
-    // テキストをパースして構造体に変換
     let result: SentimentResult = serde_json::from_str(raw_response)?;
 
     Ok(result)

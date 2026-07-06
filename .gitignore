@@ -18,3 +18,4 @@ tokencache.json
 client_secret.json
 config.json
 .DS_Store
+.aider*

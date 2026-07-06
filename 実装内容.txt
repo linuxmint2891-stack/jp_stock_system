@@ -1,0 +1,1072 @@
+2026-06-30T00:20:08.7983331Z Current runner version: '2.335.1'
+2026-06-30T00:20:08.8010880Z ##[group]Runner Image Provisioner
+2026-06-30T00:20:08.8012330Z Hosted Compute Agent
+2026-06-30T00:20:08.8013325Z Version: 20260611.554
+2026-06-30T00:20:08.8014312Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+2026-06-30T00:20:08.8015425Z Build Date: 2026-06-11T21:40:46Z
+2026-06-30T00:20:08.8016953Z Worker ID: ***a958e811-88ca-4ea4-acdc-3e5b3f287784***
+2026-06-30T00:20:08.8018099Z Azure Region: northcentralus
+2026-06-30T00:20:08.8019166Z ##[endgroup]
+2026-06-30T00:20:08.8021244Z ##[group]Operating System
+2026-06-30T00:20:08.8022168Z Ubuntu
+2026-06-30T00:20:08.8023078Z 24.04.4
+2026-06-30T00:20:08.8023950Z LTS
+2026-06-30T00:20:08.8024737Z ##[endgroup]
+2026-06-30T00:20:08.8026159Z ##[group]Runner Image
+2026-06-30T00:20:08.8027297Z Image: ubuntu-24.04
+2026-06-30T00:20:08.8028232Z Version: 20260622.220.1
+2026-06-30T00:20:08.8029861Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260622.220/images/ubuntu/Ubuntu2404-Readme.md
+2026-06-30T00:20:08.8031810Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260622.220
+2026-06-30T00:20:08.8033128Z ##[endgroup]
+2026-06-30T00:20:08.8034977Z ##[group]GITHUB_TOKEN Permissions
+2026-06-30T00:20:08.8037873Z Contents: read
+2026-06-30T00:20:08.8039117Z Metadata: read
+2026-06-30T00:20:08.8040236Z Packages: read
+2026-06-30T00:20:08.8041177Z ##[endgroup]
+2026-06-30T00:20:08.8043610Z Secret source: Actions
+2026-06-30T00:20:08.8045121Z Prepare workflow directory
+2026-06-30T00:20:08.9366804Z Prepare all required actions
+2026-06-30T00:20:08.9404163Z Getting action download info
+2026-06-30T00:20:09.1339880Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-06-30T00:20:09.2107303Z Download action repository 'dtolnay/rust-toolchain@stable' (SHA:29eef336d9b2848a0b548edc03f92a220660cdb8)
+2026-06-30T00:20:09.3525433Z Download action repository 'swatinem/rust-cache@v2' (SHA:e18b497796c12c097a38f9edb9d0641fb99eee32)
+2026-06-30T00:20:09.9827715Z Download action repository 'google-github-actions/auth@v2' (SHA:c200f3691d83b41bf9bbd8638997a462592937ed)
+2026-06-30T00:20:10.3695153Z Download action repository 'google-github-actions/setup-gcloud@v2' (SHA:e427ad8a34f8676edf47cf7d7925499adf3eb74f)
+2026-06-30T00:20:10.6218489Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-06-30T00:20:11.0722631Z Complete job name: scout_and_analyze
+2026-06-30T00:20:11.2867858Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-30T00:20:11.2877655Z ##[group]Run actions/checkout@v4
+2026-06-30T00:20:11.2878734Z with:
+2026-06-30T00:20:11.2879540Z   repository: linuxmint2891-stack/jp_stock_system
+2026-06-30T00:20:11.2885246Z   token: ***
+2026-06-30T00:20:11.2886269Z   ssh-strict: true
+2026-06-30T00:20:11.2886996Z   ssh-user: git
+2026-06-30T00:20:11.2887732Z   persist-credentials: true
+2026-06-30T00:20:11.2888514Z   clean: true
+2026-06-30T00:20:11.2889266Z   sparse-checkout-cone-mode: true
+2026-06-30T00:20:11.2890101Z   fetch-depth: 1
+2026-06-30T00:20:11.2890831Z   fetch-tags: false
+2026-06-30T00:20:11.2891572Z   show-progress: true
+2026-06-30T00:20:11.2892306Z   lfs: false
+2026-06-30T00:20:11.2893039Z   submodules: false
+2026-06-30T00:20:11.2893873Z   set-safe-directory: true
+2026-06-30T00:20:11.2895299Z env:
+2026-06-30T00:20:11.2896391Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:11.2912600Z ##[endgroup]
+2026-06-30T00:20:11.3891185Z Syncing repository: linuxmint2891-stack/jp_stock_system
+2026-06-30T00:20:11.3893925Z ##[group]Getting Git version info
+2026-06-30T00:20:11.3895159Z Working directory is '/home/runner/work/jp_stock_system/jp_stock_system'
+2026-06-30T00:20:11.3897289Z [command]/usr/bin/git version
+2026-06-30T00:20:11.3987183Z git version 2.54.0
+2026-06-30T00:20:11.4041092Z ##[endgroup]
+2026-06-30T00:20:11.4054607Z Temporarily overriding HOME='/home/runner/work/_temp/39a2f5b4-8eda-41bf-a5f9-e75cf78bf470' before making global git config changes
+2026-06-30T00:20:11.4057068Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-30T00:20:11.4060309Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/jp_stock_system/jp_stock_system
+2026-06-30T00:20:11.4112207Z Deleting the contents of '/home/runner/work/jp_stock_system/jp_stock_system'
+2026-06-30T00:20:11.4116368Z ##[group]Initializing the repository
+2026-06-30T00:20:11.4121344Z [command]/usr/bin/git init /home/runner/work/jp_stock_system/jp_stock_system
+2026-06-30T00:20:11.4237271Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-06-30T00:20:11.4239278Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-06-30T00:20:11.4241441Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-06-30T00:20:11.4243527Z hint: call:
+2026-06-30T00:20:11.4244798Z hint:
+2026-06-30T00:20:11.4246373Z hint: 	git config --global init.defaultBranch <name>
+2026-06-30T00:20:11.4247473Z hint:
+2026-06-30T00:20:11.4248409Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-06-30T00:20:11.4250293Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-06-30T00:20:11.4251481Z hint:
+2026-06-30T00:20:11.4252183Z hint: 	git branch -m <name>
+2026-06-30T00:20:11.4253334Z hint:
+2026-06-30T00:20:11.4254902Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-06-30T00:20:11.4256860Z Initialized empty Git repository in /home/runner/work/jp_stock_system/jp_stock_system/.git/
+2026-06-30T00:20:11.4259662Z [command]/usr/bin/git remote add origin https://github.com/linuxmint2891-stack/jp_stock_system
+2026-06-30T00:20:11.4301904Z ##[endgroup]
+2026-06-30T00:20:11.4303427Z ##[group]Disabling automatic garbage collection
+2026-06-30T00:20:11.4305102Z [command]/usr/bin/git config --local gc.auto 0
+2026-06-30T00:20:11.4334282Z ##[endgroup]
+2026-06-30T00:20:11.4335947Z ##[group]Setting up auth
+2026-06-30T00:20:11.4340228Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-30T00:20:11.4374139Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-30T00:20:11.4741907Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-30T00:20:11.4772190Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-30T00:20:11.4989961Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-06-30T00:20:11.5023418Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-06-30T00:20:11.5241976Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-06-30T00:20:11.5278259Z ##[endgroup]
+2026-06-30T00:20:11.5280654Z ##[group]Fetching the repository
+2026-06-30T00:20:11.5289463Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +0dde7c18e67f03fc9690b1e0d78ac44575a9cc2e:refs/remotes/origin/master
+2026-06-30T00:20:11.9942671Z From https://github.com/linuxmint2891-stack/jp_stock_system
+2026-06-30T00:20:11.9945032Z  * [new ref]         0dde7c18e67f03fc9690b1e0d78ac44575a9cc2e -> origin/master
+2026-06-30T00:20:11.9979257Z ##[endgroup]
+2026-06-30T00:20:11.9981843Z ##[group]Determining the checkout info
+2026-06-30T00:20:11.9984077Z ##[endgroup]
+2026-06-30T00:20:11.9987296Z [command]/usr/bin/git sparse-checkout disable
+2026-06-30T00:20:12.0040180Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-06-30T00:20:12.0071432Z ##[group]Checking out the ref
+2026-06-30T00:20:12.0075238Z [command]/usr/bin/git checkout --progress --force -B master refs/remotes/origin/master
+2026-06-30T00:20:12.0211588Z Reset branch 'master'
+2026-06-30T00:20:12.0214680Z branch 'master' set up to track 'origin/master'.
+2026-06-30T00:20:12.0224689Z ##[endgroup]
+2026-06-30T00:20:12.0262701Z [command]/usr/bin/git log -1 --format=%H
+2026-06-30T00:20:12.0286080Z 0dde7c18e67f03fc9690b1e0d78ac44575a9cc2e
+2026-06-30T00:20:12.1418470Z ##[group]Run dtolnay/rust-toolchain@stable
+2026-06-30T00:20:12.1420080Z with:
+2026-06-30T00:20:12.1421259Z   toolchain: stable
+2026-06-30T00:20:12.1422506Z env:
+2026-06-30T00:20:12.1423687Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.1425044Z ##[endgroup]
+2026-06-30T00:20:12.1732752Z ##[group]Run : parse toolchain version
+2026-06-30T00:20:12.1734406Z [36;1m: parse toolchain version[0m
+2026-06-30T00:20:12.1736124Z [36;1mif [[ -z $toolchain ]]; then[0m
+2026-06-30T00:20:12.1738500Z [36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070[0m
+2026-06-30T00:20:12.1740987Z [36;1m  echo "'toolchain' is a required input" >&2[0m
+2026-06-30T00:20:12.1742566Z [36;1m  exit 1[0m
+2026-06-30T00:20:12.1744282Z [36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then[0m
+2026-06-30T00:20:12.1746490Z [36;1m  if [[ Linux == macOS ]]; then[0m
+2026-06-30T00:20:12.1748941Z [36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.1751297Z [36;1m  else[0m
+2026-06-30T00:20:12.1753342Z [36;1m    echo "toolchain=1.$((($(date --date "$***toolchain#stable ***" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.1755763Z [36;1m  fi[0m
+2026-06-30T00:20:12.1757349Z [36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then[0m
+2026-06-30T00:20:12.1759875Z [36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-$***toolchain//[^0-9]/***))" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.1762111Z [36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then[0m
+2026-06-30T00:20:12.1764570Z [36;1m  echo "toolchain=1.$((i=$***toolchain#1.***, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.1767044Z [36;1melse[0m
+2026-06-30T00:20:12.1768431Z [36;1m  echo "toolchain=$toolchain" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.1770037Z [36;1mfi[0m
+2026-06-30T00:20:12.1938522Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.1940311Z env:
+2026-06-30T00:20:12.1941477Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.1942812Z   toolchain: stable
+2026-06-30T00:20:12.1944051Z ##[endgroup]
+2026-06-30T00:20:12.2281026Z ##[group]Run : construct rustup command line
+2026-06-30T00:20:12.2282698Z [36;1m: construct rustup command line[0m
+2026-06-30T00:20:12.2284904Z [36;1mecho "targets=$(for t in $***targets//,/ ***; do echo -n ' --target' $t; done)" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.2287998Z [36;1mecho "components=$(for c in $***components//,/ ***; do echo -n ' --component' $c; done)" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.2290374Z [36;1mecho "downgrade=" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.2324815Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.2326725Z env:
+2026-06-30T00:20:12.2327886Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.2329209Z   targets: 
+2026-06-30T00:20:12.2330367Z   components: 
+2026-06-30T00:20:12.2331541Z ##[endgroup]
+2026-06-30T00:20:12.2611833Z ##[group]Run : set $CARGO_HOME
+2026-06-30T00:20:12.2613260Z [36;1m: set $CARGO_HOME[0m
+2026-06-30T00:20:12.2615025Z [36;1mecho CARGO_HOME=$***CARGO_HOME:-"$HOME/.cargo"*** >> $GITHUB_ENV[0m
+2026-06-30T00:20:12.2648094Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.2649817Z env:
+2026-06-30T00:20:12.2651158Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.2652485Z ##[endgroup]
+2026-06-30T00:20:12.2933666Z ##[group]Run : install rustup if needed
+2026-06-30T00:20:12.2935363Z [36;1m: install rustup if needed[0m
+2026-06-30T00:20:12.2937418Z [36;1mif ! command -v rustup &>/dev/null; then[0m
+2026-06-30T00:20:12.2940933Z [36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://sh.rustup.rs | sh -s -- --default-toolchain none -y[0m
+2026-06-30T00:20:12.2944647Z [36;1m  echo "$CARGO_HOME/bin" >> $GITHUB_PATH[0m
+2026-06-30T00:20:12.2946578Z [36;1mfi[0m
+2026-06-30T00:20:12.2979766Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.2981649Z env:
+2026-06-30T00:20:12.2982910Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.2984434Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.2986206Z ##[endgroup]
+2026-06-30T00:20:12.3412480Z ##[group]Run rustup toolchain install stable --profile minimal --no-self-update
+2026-06-30T00:20:12.3414954Z [36;1mrustup toolchain install stable --profile minimal --no-self-update[0m
+2026-06-30T00:20:12.3449048Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.3450800Z env:
+2026-06-30T00:20:12.3451990Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.3453395Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.3454860Z   RUSTUP_PERMIT_COPY_RENAME: 1
+2026-06-30T00:20:12.3456517Z ##[endgroup]
+2026-06-30T00:20:12.5492822Z info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+2026-06-30T00:20:12.6266604Z 
+2026-06-30T00:20:12.6348234Z   stable-x86_64-unknown-linux-gnu unchanged - rustc 1.96.0 (ac68faa20 2026-05-25)
+2026-06-30T00:20:12.6350279Z 
+2026-06-30T00:20:12.6572991Z ##[group]Run rustup default stable
+2026-06-30T00:20:12.6574665Z [36;1mrustup default stable[0m
+2026-06-30T00:20:12.6610169Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.6612040Z env:
+2026-06-30T00:20:12.6613389Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.6614962Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.6616672Z ##[endgroup]
+2026-06-30T00:20:12.6740911Z info: using existing install for stable-x86_64-unknown-linux-gnu
+2026-06-30T00:20:12.6748741Z info: default toolchain set to stable-x86_64-unknown-linux-gnu
+2026-06-30T00:20:12.6750449Z 
+2026-06-30T00:20:12.6828402Z   stable-x86_64-unknown-linux-gnu unchanged - rustc 1.96.0 (ac68faa20 2026-05-25)
+2026-06-30T00:20:12.6830401Z 
+2026-06-30T00:20:12.7037407Z ##[group]Run : create cachekey
+2026-06-30T00:20:12.7038994Z [36;1m: create cachekey[0m
+2026-06-30T00:20:12.7041406Z [36;1mDATE=$(rustc +stable --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')[0m
+2026-06-30T00:20:12.7044353Z [36;1mHASH=$(rustc +stable --version --verbose | sed -ne 's/^commit-hash: //p')[0m
+2026-06-30T00:20:12.7047032Z [36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT[0m
+2026-06-30T00:20:12.7082786Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.7084628Z env:
+2026-06-30T00:20:12.7086186Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.7087680Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.7089161Z ##[endgroup]
+2026-06-30T00:20:12.7706229Z ##[group]Run : disable incremental compilation
+2026-06-30T00:20:12.7707999Z [36;1m: disable incremental compilation[0m
+2026-06-30T00:20:12.7709814Z [36;1mif [ -z "$***CARGO_INCREMENTAL+set***" ]; then[0m
+2026-06-30T00:20:12.7711634Z [36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV[0m
+2026-06-30T00:20:12.7713239Z [36;1mfi[0m
+2026-06-30T00:20:12.7748200Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.7749959Z env:
+2026-06-30T00:20:12.7751183Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.7752617Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.7754064Z ##[endgroup]
+2026-06-30T00:20:12.8025217Z ##[group]Run : enable colors in Cargo output
+2026-06-30T00:20:12.8027392Z [36;1m: enable colors in Cargo output[0m
+2026-06-30T00:20:12.8029558Z [36;1mif [ -z "$***CARGO_TERM_COLOR+set***" ]; then[0m
+2026-06-30T00:20:12.8031551Z [36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV[0m
+2026-06-30T00:20:12.8033359Z [36;1mfi[0m
+2026-06-30T00:20:12.8066666Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.8068669Z env:
+2026-06-30T00:20:12.8070074Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.8071700Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.8073375Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:20:12.8074896Z ##[endgroup]
+2026-06-30T00:20:12.8339747Z ##[group]Run : enable Cargo sparse registry
+2026-06-30T00:20:12.8341426Z [36;1m: enable Cargo sparse registry[0m
+2026-06-30T00:20:12.8343291Z [36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70[0m
+2026-06-30T00:20:12.8346491Z [36;1mif [ -z "$***CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set***" -o -f "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol ]; then[0m
+2026-06-30T00:20:12.8349631Z [36;1m  if rustc +stable --version --verbose | grep -q '^release: 1\.6[89]\.'; then[0m
+2026-06-30T00:20:12.8352218Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-06-30T00:20:12.8354697Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV[0m
+2026-06-30T00:20:12.8357459Z [36;1m  elif rustc +stable --version --verbose | grep -q '^release: 1\.6[67]\.'; then[0m
+2026-06-30T00:20:12.8360104Z [36;1m    touch "/home/runner/work/_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+2026-06-30T00:20:12.8362551Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV[0m
+2026-06-30T00:20:12.8364378Z [36;1m  fi[0m
+2026-06-30T00:20:12.8365748Z [36;1mfi[0m
+2026-06-30T00:20:12.8398557Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.8400313Z env:
+2026-06-30T00:20:12.8401535Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.8402966Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.8404423Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:20:12.8405897Z ##[endgroup]
+2026-06-30T00:20:12.8968622Z ##[group]Run : work around spurious network errors in curl 8.0
+2026-06-30T00:20:12.8970802Z [36;1m: work around spurious network errors in curl 8.0[0m
+2026-06-30T00:20:12.8973445Z [36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation[0m
+2026-06-30T00:20:12.8976537Z [36;1mif rustc +stable --version --verbose | grep -q '^release: 1\.7[01]\.'; then[0m
+2026-06-30T00:20:12.8978952Z [36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV[0m
+2026-06-30T00:20:12.8980767Z [36;1mfi[0m
+2026-06-30T00:20:12.9016325Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.9018230Z env:
+2026-06-30T00:20:12.9019558Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.9021111Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.9022710Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:20:12.9024171Z ##[endgroup]
+2026-06-30T00:20:12.9422243Z ##[group]Run rustc +stable --version --verbose
+2026-06-30T00:20:12.9423961Z [36;1mrustc +stable --version --verbose[0m
+2026-06-30T00:20:12.9458169Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail ***0***
+2026-06-30T00:20:12.9459941Z env:
+2026-06-30T00:20:12.9461150Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:12.9462569Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:12.9464034Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:20:12.9465345Z ##[endgroup]
+2026-06-30T00:20:12.9664233Z rustc 1.96.0 (ac68faa20 2026-05-25)
+2026-06-30T00:20:12.9666918Z binary: rustc
+2026-06-30T00:20:12.9668555Z commit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
+2026-06-30T00:20:12.9670325Z commit-date: 2026-05-25
+2026-06-30T00:20:12.9671801Z host: x86_64-unknown-linux-gnu
+2026-06-30T00:20:12.9673315Z release: 1.96.0
+2026-06-30T00:20:12.9674638Z LLVM version: 22.1.2
+2026-06-30T00:20:13.0915111Z ##[group]Run swatinem/rust-cache@v2
+2026-06-30T00:20:13.0916976Z with:
+2026-06-30T00:20:13.0918309Z   prefix-key: v0-rust
+2026-06-30T00:20:13.0919956Z   add-job-id-key: true
+2026-06-30T00:20:13.0921486Z   add-rust-environment-hash-key: true
+2026-06-30T00:20:13.0923307Z   cache-targets: true
+2026-06-30T00:20:13.0924937Z   cache-all-crates: false
+2026-06-30T00:20:13.0927060Z   cache-workspace-crates: false
+2026-06-30T00:20:13.0936802Z   save-if: true
+2026-06-30T00:20:13.0938309Z   cache-provider: github
+2026-06-30T00:20:13.0939805Z   cache-bin: true
+2026-06-30T00:20:13.0941214Z   lookup-only: false
+2026-06-30T00:20:13.0942707Z   cmd-format: ***0***
+2026-06-30T00:20:13.0944114Z env:
+2026-06-30T00:20:13.0945433Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:13.0947125Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:13.0948715Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:20:13.0950133Z ##[endgroup]
+2026-06-30T00:20:13.3883844Z (node:2380) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-30T00:20:13.3890378Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-30T00:20:13.5913772Z ##[group]Cache Configuration
+2026-06-30T00:20:13.5917198Z Cache Provider:
+2026-06-30T00:20:13.5919980Z     github
+2026-06-30T00:20:13.5922553Z Workspaces:
+2026-06-30T00:20:13.5925378Z     /home/runner/work/jp_stock_system/jp_stock_system
+2026-06-30T00:20:13.5928933Z Cache Paths:
+2026-06-30T00:20:13.5931704Z     /home/runner/.cargo/bin
+2026-06-30T00:20:13.5934586Z     /home/runner/.cargo/.crates.toml
+2026-06-30T00:20:13.5936942Z     /home/runner/.cargo/.crates2.json
+2026-06-30T00:20:13.5938528Z     /home/runner/.cargo/registry
+2026-06-30T00:20:13.5939996Z     /home/runner/.cargo/git
+2026-06-30T00:20:13.5941615Z     /home/runner/work/jp_stock_system/jp_stock_system/target
+2026-06-30T00:20:13.5943270Z Restore Key:
+2026-06-30T00:20:13.5944625Z     v0-rust-scout_and_analyze-Linux-x64-4107bf91
+2026-06-30T00:20:13.5946561Z Cache Key:
+2026-06-30T00:20:13.5948002Z     v0-rust-scout_and_analyze-Linux-x64-4107bf91-2c9720c8
+2026-06-30T00:20:13.5949624Z .. Prefix:
+2026-06-30T00:20:13.5950909Z   - v0-rust-scout_and_analyze-Linux-x64
+2026-06-30T00:20:13.5952401Z .. Environment considered:
+2026-06-30T00:20:13.5953763Z   - Rust Versions:
+2026-06-30T00:20:13.5955885Z     - 1.96.0 x86_64-unknown-linux-gnu ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
+2026-06-30T00:20:13.5958756Z     - 1.96.0 x86_64-unknown-linux-gnu ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
+2026-06-30T00:20:13.5961082Z   - CARGO_HOME
+2026-06-30T00:20:13.5962666Z   - CARGO_INCREMENTAL
+2026-06-30T00:20:13.5964482Z   - CARGO_TERM_COLOR
+2026-06-30T00:20:13.5966412Z .. Lockfiles considered:
+2026-06-30T00:20:13.5968995Z   - /home/runner/work/jp_stock_system/jp_stock_system/Cargo.lock
+2026-06-30T00:20:13.5972524Z   - /home/runner/work/jp_stock_system/jp_stock_system/Cargo.toml
+2026-06-30T00:20:13.5976579Z ##[endgroup]
+2026-06-30T00:20:13.5977277Z 
+2026-06-30T00:20:13.5977877Z ... Restoring cache ...
+2026-06-30T00:20:13.7448850Z Cache hit for: v0-rust-scout_and_analyze-Linux-x64-4107bf91-2c9720c8
+2026-06-30T00:20:14.8422530Z Received 130023424 of 439638934 (29.6%), 123.9 MBs/sec
+2026-06-30T00:20:15.8487514Z Received 293601280 of 439638934 (66.8%), 139.6 MBs/sec
+2026-06-30T00:20:16.5757359Z Received 439638934 of 439638934 (100.0%), 153.4 MBs/sec
+2026-06-30T00:20:16.5786240Z Cache Size: ~419 MB (439638934 B)
+2026-06-30T00:20:16.5866437Z [command]/usr/bin/tar -xf /home/runner/work/_temp/8b157735-d907-4d67-b647-7aa5d55a43d8/cache.tzst -P -C /home/runner/work/jp_stock_system/jp_stock_system --use-compress-program unzstd
+2026-06-30T00:20:19.7119595Z Cache restored successfully
+2026-06-30T00:20:19.7317743Z Restored from cache key "v0-rust-scout_and_analyze-Linux-x64-4107bf91-2c9720c8" full match: true.
+2026-06-30T00:20:19.7773837Z ##[group]Run curl -fsSL https://ollama.com/install.sh | sh
+2026-06-30T00:20:19.7774475Z [36;1mcurl -fsSL https://ollama.com/install.sh | sh[0m
+2026-06-30T00:20:19.7774989Z [36;1m# バックグラウンドでサーバーを起動し、起動を少し待つ[0m
+2026-06-30T00:20:19.7775393Z [36;1mollama serve &[0m
+2026-06-30T00:20:19.7775973Z [36;1msleep 5[0m
+2026-06-30T00:20:19.7776522Z [36;1m# 必要なモデル（Gemma 3）をローカル環境にプル[0m
+2026-06-30T00:20:19.7776920Z [36;1mollama pull gemma3:latest[0m
+2026-06-30T00:20:19.7809603Z shell: /usr/bin/bash -e ***0***
+2026-06-30T00:20:19.7810189Z env:
+2026-06-30T00:20:19.7810629Z   CARGO_TERM_COLOR: always
+2026-06-30T00:20:19.7811024Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:20:19.7811423Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:20:19.7811778Z   CACHE_ON_FAILURE: false
+2026-06-30T00:20:19.7812137Z ##[endgroup]
+2026-06-30T00:20:20.1966957Z >>> Installing ollama to /usr/local
+2026-06-30T00:20:20.5727838Z >>> Downloading ollama-linux-amd64.tar.zst
+2026-06-30T00:20:20.8245741Z #=#=#                                                                          
+2026-06-30T00:20:20.8246629Z 
+2026-06-30T00:20:20.9443914Z                                                                            0.0%
+2026-06-30T00:20:21.0446221Z #                                                                          1.5%
+2026-06-30T00:20:21.1446187Z ##                                                                         3.5%
+2026-06-30T00:20:21.2514379Z ####                                                                       5.9%
+2026-06-30T00:20:21.3547198Z ######                                                                     8.9%
+2026-06-30T00:20:21.4553842Z ########                                                                  11.2%
+2026-06-30T00:20:22.4656879Z #########                                                                 13.8%
+2026-06-30T00:20:22.7156663Z ##########                                                                14.2%
+2026-06-30T00:20:22.8253011Z ##########                                                                14.2%
+2026-06-30T00:20:22.9326017Z ############                                                              17.6%
+2026-06-30T00:20:23.0979657Z ###############                                                           20.9%
+2026-06-30T00:20:23.2210507Z #################                                                         23.6%
+2026-06-30T00:20:23.3262084Z #################                                                         24.3%
+2026-06-30T00:20:23.4557623Z ##################                                                        25.8%
+2026-06-30T00:20:23.5777324Z ####################                                                      28.3%
+2026-06-30T00:20:23.6784205Z ######################                                                    30.7%
+2026-06-30T00:20:23.7800552Z #######################                                                   32.8%
+2026-06-30T00:20:23.8809716Z ########################                                                  34.2%
+2026-06-30T00:20:23.9811926Z #########################                                                 35.7%
+2026-06-30T00:20:24.0819294Z ##########################                                                37.3%
+2026-06-30T00:20:24.1828897Z ###########################                                               38.7%
+2026-06-30T00:20:24.3003766Z #############################                                             41.0%
+2026-06-30T00:20:24.4066842Z ###############################                                           43.9%
+2026-06-30T00:20:24.5111576Z ################################                                          45.4%
+2026-06-30T00:20:24.6117385Z ##################################                                        47.6%
+2026-06-30T00:20:24.7144158Z ####################################                                      50.6%
+2026-06-30T00:20:24.8356657Z ######################################                                    53.2%
+2026-06-30T00:20:24.9404984Z #######################################                                   55.1%
+2026-06-30T00:20:25.0493818Z ########################################                                  56.8%
+2026-06-30T00:20:25.1632139Z ##########################################                                59.6%
+2026-06-30T00:20:25.2632687Z ############################################                              61.8%
+2026-06-30T00:20:25.3786580Z ##############################################                            64.4%
+2026-06-30T00:20:25.4816551Z ################################################                          67.0%
+2026-06-30T00:20:25.5843659Z ##################################################                        70.0%
+2026-06-30T00:20:25.8477253Z ###################################################                       71.9%
+2026-06-30T00:20:25.9507850Z ######################################################                    75.2%
+2026-06-30T00:20:26.0655016Z #######################################################                   76.7%
+2026-06-30T00:20:26.1648713Z ########################################################                  78.9%
+2026-06-30T00:20:26.2690469Z ###########################################################               82.3%
+2026-06-30T00:20:26.3709410Z #############################################################             84.9%
+2026-06-30T00:20:26.4936751Z ###############################################################           87.9%
+2026-06-30T00:20:26.5951186Z ################################################################          90.1%
+2026-06-30T00:20:26.6997634Z ##################################################################        92.3%
+2026-06-30T00:20:26.8002752Z ###################################################################       93.8%
+2026-06-30T00:20:26.9027582Z #####################################################################     96.8%
+2026-06-30T00:20:27.0255194Z #######################################################################   99.1%
+2026-06-30T00:20:27.0282115Z ######################################################################## 100.0%
+2026-06-30T00:20:27.0397440Z >>> Creating ollama user...
+2026-06-30T00:20:53.2114815Z >>> Adding ollama user to render group...
+2026-06-30T00:20:53.2572598Z >>> Adding ollama user to video group...
+2026-06-30T00:20:53.2722412Z >>> Adding current user to ollama group...
+2026-06-30T00:20:53.2895056Z >>> Creating ollama systemd service...
+2026-06-30T00:20:53.2994919Z WARNING: systemd is not running
+2026-06-30T00:20:55.5859455Z >>> The Ollama API is now available at 127.0.0.1:11434.
+2026-06-30T00:20:55.5860146Z WARNING: No NVIDIA/AMD GPU detected. Ollama will run in CPU-only mode.
+2026-06-30T00:20:55.5861310Z >>> Install complete. Run "ollama" from the command line.
+2026-06-30T00:20:55.5862209Z >>> The Ollama API is now available at 127.0.0.1:11434.
+2026-06-30T00:20:55.5862930Z >>> Install complete. Run "ollama" from the command line.
+2026-06-30T00:20:55.5985674Z Couldn't find '/home/runner/.ollama/id_ed25519'. Generating new private key.
+2026-06-30T00:20:55.6000105Z Your new public key is: 
+2026-06-30T00:20:55.6000775Z 
+2026-06-30T00:20:55.6001396Z ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKOFboQtOZpEIrD+ZoNxp4UXBbx2bF1a09AnfEuMGx75
+2026-06-30T00:20:55.6002187Z 
+2026-06-30T00:20:55.6010648Z time=2026-06-30T00:20:55.600Z level=INFO source=routes.go:1961 msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: LLAMA_ARG_FIT: LLAMA_ARG_FIT_TARGET: NO_PROXY: OLLAMA_CONTEXT_LENGTH:0 OLLAMA_DEBUG:INFO OLLAMA_DEBUG_LOG_REQUESTS:false OLLAMA_EDITOR: OLLAMA_FLASH_ATTENTION:false OLLAMA_GO_TEMPLATE:true OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://127.0.0.1:11434 OLLAMA_IGPU_ENABLE: OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MAX_TRANSFER_STREAMS:4 OLLAMA_MODELS:/home/runner/.ollama/models OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NO_CLOUD:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false OLLAMA_VULKAN:true ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
+2026-06-30T00:20:55.6016800Z time=2026-06-30T00:20:55.600Z level=INFO source=routes.go:1963 msg="Ollama cloud disabled: false"
+2026-06-30T00:20:55.6017715Z time=2026-06-30T00:20:55.600Z level=INFO source=images.go:883 msg="total blobs: 0"
+2026-06-30T00:20:55.6018564Z time=2026-06-30T00:20:55.600Z level=INFO source=images.go:890 msg="total unused blobs removed: 0"
+2026-06-30T00:20:55.6019454Z time=2026-06-30T00:20:55.600Z level=INFO source=routes.go:2023 msg="Listening on 127.0.0.1:11434 (version 0.30.11)"
+2026-06-30T00:20:55.6031703Z time=2026-06-30T00:20:55.602Z level=INFO source=model_list_cache.go:111 msg="model list cache hydration complete" models=0 failures=0 elapsed=133.091µs
+2026-06-30T00:20:55.6034428Z time=2026-06-30T00:20:55.603Z level=INFO source=runner.go:60 msg="discovering available GPUs..."
+2026-06-30T00:20:55.7509725Z time=2026-06-30T00:20:55.750Z level=INFO source=types.go:50 msg="inference compute" id=cpu library=cpu compute="" name=cpu description=cpu libdirs=ollama driver="" pci_id="" type="" total="15.6 GiB" available="14.2 GiB"
+2026-06-30T00:20:55.7511097Z time=2026-06-30T00:20:55.750Z level=INFO source=routes.go:2073 msg="vram-based default context" total_vram="0 B" default_num_ctx=4096
+2026-06-30T00:20:55.7539393Z time=2026-06-30T00:20:55.753Z level=INFO source=model_recommendations.go:177 msg="model recommendations cache sleep scheduled" wait=4h6m44.424621222s consecutive_failures=0
+2026-06-30T00:21:00.6008080Z [GIN] 2026/06/30 - 00:21:00 | 200 |      84.038µs |       127.0.0.1 | HEAD     "/"
+2026-06-30T00:21:01.3596506Z [?2026h[?25l[1Gpulling manifest ⠋ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest ⠙ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest ⠹ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest ⠼ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest ⠼ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest ⠴ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest ⠦ [K[?25h[?2026ltime=2026-06-30T00:21:01.359Z level=INFO source=download.go:179 msg="downloading aeda25e63ebd in 16 208 MB part(s)"
+2026-06-30T00:21:01.6018183Z [?2026h[?25l[1Gpulling manifest ⠧ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest ⠇ [K[?25h[?2026l[?2026h[?25l[1Gpulling manifest [K
+2026-06-30T00:21:01.7037838Z pulling aeda25e63ebd:   0% ▕                  ▏ 3.9 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:01.8023264Z pulling aeda25e63ebd:   1% ▕                  ▏  45 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:01.9016412Z pulling aeda25e63ebd:   4% ▕                  ▏ 142 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.0021855Z pulling aeda25e63ebd:   7% ▕█                 ▏ 246 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.1022294Z pulling aeda25e63ebd:   9% ▕█                 ▏ 304 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.2032718Z pulling aeda25e63ebd:  13% ▕██                ▏ 417 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.3022994Z pulling aeda25e63ebd:  14% ▕██                ▏ 471 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.4039751Z pulling aeda25e63ebd:  17% ▕███               ▏ 583 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.5016688Z pulling aeda25e63ebd:  21% ▕███               ▏ 685 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.6020894Z pulling aeda25e63ebd:  24% ▕████              ▏ 794 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.7038453Z pulling aeda25e63ebd:  26% ▕████              ▏ 857 MB/3.3 GB                  [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.8057566Z pulling aeda25e63ebd:  29% ▕█████             ▏ 965 MB/3.3 GB  908 MB/s      2s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:02.9043122Z pulling aeda25e63ebd:  31% ▕█████             ▏ 1.0 GB/3.3 GB  908 MB/s      2s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.0017067Z pulling aeda25e63ebd:  34% ▕██████            ▏ 1.1 GB/3.3 GB  908 MB/s      2s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.1034234Z pulling aeda25e63ebd:  37% ▕██████            ▏ 1.2 GB/3.3 GB  908 MB/s      2s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.2021679Z pulling aeda25e63ebd:  40% ▕███████           ▏ 1.3 GB/3.3 GB  908 MB/s      2s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.3062104Z pulling aeda25e63ebd:  42% ▕███████           ▏ 1.4 GB/3.3 GB  908 MB/s      2s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.4022739Z pulling aeda25e63ebd:  45% ▕████████          ▏ 1.5 GB/3.3 GB  908 MB/s      2s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.5014745Z pulling aeda25e63ebd:  48% ▕████████          ▏ 1.6 GB/3.3 GB  908 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.6020109Z pulling aeda25e63ebd:  49% ▕████████          ▏ 1.6 GB/3.3 GB  908 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.7038063Z pulling aeda25e63ebd:  52% ▕█████████         ▏ 1.7 GB/3.3 GB  908 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.8018839Z pulling aeda25e63ebd:  54% ▕█████████         ▏ 1.8 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:03.9017980Z pulling aeda25e63ebd:  57% ▕██████████        ▏ 1.9 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.0024912Z pulling aeda25e63ebd:  60% ▕██████████        ▏ 2.0 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.1019991Z pulling aeda25e63ebd:  63% ▕███████████       ▏ 2.1 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.2032750Z pulling aeda25e63ebd:  65% ▕███████████       ▏ 2.2 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.3033927Z pulling aeda25e63ebd:  68% ▕████████████      ▏ 2.3 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.4016308Z pulling aeda25e63ebd:  71% ▕████████████      ▏ 2.4 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.5023085Z pulling aeda25e63ebd:  72% ▕█████████████     ▏ 2.4 GB/3.3 GB  895 MB/s      1s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.6013791Z pulling aeda25e63ebd:  75% ▕█████████████     ▏ 2.5 GB/3.3 GB  895 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.7035292Z pulling aeda25e63ebd:  79% ▕██████████████    ▏ 2.6 GB/3.3 GB  895 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.8021347Z pulling aeda25e63ebd:  80% ▕██████████████    ▏ 2.7 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:04.9016403Z pulling aeda25e63ebd:  84% ▕███████████████   ▏ 2.8 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.0024277Z pulling aeda25e63ebd:  87% ▕███████████████   ▏ 2.9 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.1015018Z pulling aeda25e63ebd:  88% ▕███████████████   ▏ 2.9 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.2019418Z pulling aeda25e63ebd:  91% ▕████████████████  ▏ 3.1 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.3020306Z pulling aeda25e63ebd:  95% ▕█████████████████ ▏ 3.2 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.4020079Z pulling aeda25e63ebd:  96% ▕█████████████████ ▏ 3.2 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.5020755Z pulling aeda25e63ebd:  97% ▕█████████████████ ▏ 3.3 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.6018302Z pulling aeda25e63ebd:  98% ▕█████████████████ ▏ 3.3 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.7016091Z pulling aeda25e63ebd:  98% ▕█████████████████ ▏ 3.3 GB/3.3 GB  891 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.8018329Z pulling aeda25e63ebd:  98% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:05.9020830Z pulling aeda25e63ebd:  98% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.0018908Z pulling aeda25e63ebd:  98% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.1015395Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.2013772Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.3016495Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.4013733Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.5018210Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.6020064Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.7014705Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  820 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.8014222Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  661 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:06.9014208Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  661 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.0012611Z pulling aeda25e63ebd:  99% ▕█████████████████ ▏ 3.3 GB/3.3 GB  661 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.1012646Z pulling aeda25e63ebd: 100% ▕█████████████████ ▏ 3.3 GB/3.3 GB  661 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.2013392Z pulling aeda25e63ebd: 100% ▕█████████████████ ▏ 3.3 GB/3.3 GB  661 MB/s      0s[K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.3016156Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.4017465Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.5021648Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.6013845Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.6250241Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K[?25h[?2026ltime=2026-06-30T00:21:07.624Z level=INFO source=download.go:179 msg="downloading e0a42594d802 in 1 358 B part(s)"
+2026-06-30T00:21:07.7019527Z [?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.8015174Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.9018649Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K[?25h[?2026l[?2026h[?25l[A[1Gpulling manifest [K
+2026-06-30T00:21:07.9019784Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.0014927Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.0016288Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.1017162Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.1018121Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.2022208Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.2023381Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.3015968Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.3016967Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.4018092Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.4019417Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.5012436Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.5013807Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.6019218Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.6021019Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.7020125Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.7021076Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.8012329Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.8013987Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:08.9011619Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026ltime=2026-06-30T00:21:08.900Z level=INFO source=download.go:179 msg="downloading dd084c7d92a3 in 1 8.4 KB part(s)"
+2026-06-30T00:21:08.9014129Z [?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:08.9015045Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.0017319Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.0018264Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.1017232Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.1018158Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.2016689Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K[?25h[?2026l[?2026h[?25l[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.2017696Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.2018524Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:09.3020133Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.3021224Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.3022082Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:09.4014249Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.4015788Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.4016819Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:09.5017731Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.5019496Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.5020369Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:09.6012154Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.6013700Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.6014673Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:09.7017020Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.7018009Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.7018744Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:09.8019455Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.8020580Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.8021489Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:09.9013879Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:09.9015047Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:09.9016254Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.0017527Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.0018489Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.0019256Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.1020638Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.1021773Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.1022666Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.1997902Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026ltime=2026-06-30T00:21:10.199Z level=INFO source=download.go:179 msg="downloading 3116c5225075 in 1 77 B part(s)"
+2026-06-30T00:21:10.2011603Z [?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.2012632Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.2013744Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.3014296Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.3016043Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.3017145Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.4013708Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.4015158Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.4016580Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.5020325Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K[?25h[?2026l[?2026h[?25l[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.5021291Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.5022028Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.5022732Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:10.6011645Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.6012746Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.6013595Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.6014409Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:10.7016496Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.7017594Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.7018430Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.7019272Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:10.8018275Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.8019282Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.8020021Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.8020751Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:10.9022159Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:10.9023651Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:10.9025252Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:10.9026468Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.0013970Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.0015849Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.0016832Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.0017772Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.1018097Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.1019693Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.1020960Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.1022175Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.2022163Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.2023212Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.2023997Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.2024760Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.3014659Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.3016098Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.3016974Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.3017807Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.4017550Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.4018744Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.4019586Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.4020405Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.5020609Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.5022009Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.5022814Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.5023580Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.5104280Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026ltime=2026-06-30T00:21:11.510Z level=INFO source=download.go:179 msg="downloading b6ae5839783f in 1 489 B part(s)"
+2026-06-30T00:21:11.6011644Z [?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.6012617Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.6013609Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.6014565Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.7014357Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.7015355Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.7016439Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.7017200Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.8018804Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.8020518Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.8021772Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.8022748Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.8023733Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:11.9013552Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:11.9014607Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:11.9015403Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:11.9016422Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:11.9017218Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.0019064Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.0020101Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.0021293Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.0022073Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.0022836Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.1021888Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.1023342Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.1024126Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.1024890Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.1025863Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.2016740Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.2017778Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.2018566Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.2019325Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.2020092Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.3021198Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.3022217Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.3023007Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.3023772Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.3024547Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.4014134Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.4015300Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.4016458Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.4017314Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.4018178Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.5019584Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.5020663Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.5021927Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.5022755Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.5023573Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.6015886Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.6017386Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.6018241Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.6019070Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.6019874Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.6020728Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:12.7020884Z verifying sha256 digest ⠋ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.7021855Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.7022652Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.7023457Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.7024207Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.7024950Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:12.8014113Z verifying sha256 digest ⠙ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.8015375Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.8016755Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.8017831Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.8018885Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.8019914Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:12.9018205Z verifying sha256 digest ⠹ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:12.9019594Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:12.9020776Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:12.9021607Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:12.9022330Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:12.9023453Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.0012473Z verifying sha256 digest ⠸ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.0014197Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.0015954Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.0017592Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.0018537Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.0019467Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.1016479Z verifying sha256 digest ⠼ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.1017485Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.1018300Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.1019048Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.1019805Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.1020540Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.2019892Z verifying sha256 digest ⠴ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.2021703Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.2023011Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.2023778Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.2024511Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.2025279Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.3013793Z verifying sha256 digest ⠦ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.3015134Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.3016692Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.3017613Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.3018326Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.3019008Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.4018737Z verifying sha256 digest ⠧ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.4020083Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.4021831Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.4022646Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.4023369Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.4024063Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.5013800Z verifying sha256 digest ⠇ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.5014730Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.5015817Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.5016613Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.5017352Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.5018120Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.6017839Z verifying sha256 digest ⠏ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.6019155Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.6020370Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.6021523Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.6022829Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.6023904Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.7012448Z verifying sha256 digest ⠋ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.7013980Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.7014967Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.7016035Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.7016781Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.7017542Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.8016410Z verifying sha256 digest ⠙ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.8017877Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.8019155Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.8019998Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.8021160Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.8021948Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:13.9020220Z verifying sha256 digest ⠹ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:13.9021450Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:13.9022874Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:13.9023924Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:13.9024967Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:13.9026280Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.0014983Z verifying sha256 digest ⠸ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.0016377Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.0017154Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.0017905Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.0018645Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.0019398Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.1019425Z verifying sha256 digest ⠼ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.1020661Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.1021759Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.1022806Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.1023886Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.1025107Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.2021941Z verifying sha256 digest ⠴ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.2023010Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.2023893Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.2024718Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.2025715Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.2026450Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.3016597Z verifying sha256 digest ⠦ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.3018332Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.3019488Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.3020542Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.3021580Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.3022835Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.4021174Z verifying sha256 digest ⠧ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.4022144Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.4022994Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.4024017Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.4024866Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.4025886Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.5015735Z verifying sha256 digest ⠇ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.5016822Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.5017782Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.5018651Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.5019515Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.5020378Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.6020156Z verifying sha256 digest ⠏ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.6021077Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.6021813Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.6022553Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.6023309Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.6024185Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.7014213Z verifying sha256 digest ⠋ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.7015734Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.7016839Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.7017893Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.7019343Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.7020398Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.8017757Z verifying sha256 digest ⠙ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.8018698Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.8019816Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.8020595Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.8021365Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.8022120Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.9021332Z verifying sha256 digest ⠹ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.9022643Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.9023738Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.9024799Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.9026089Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.9027188Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.9876325Z [GIN] 2026/06/30 - 00:21:14 | 200 | 14.386471225s |       127.0.0.1 | POST     "/api/pull"
+2026-06-30T00:21:14.9877924Z verifying sha256 digest ⠸ [K[?25h[?2026l[?2026h[?25l[A[A[A[A[A[A[1Gpulling manifest [K
+2026-06-30T00:21:14.9878953Z pulling aeda25e63ebd: 100% ▕██████████████████▏ 3.3 GB                         [K
+2026-06-30T00:21:14.9879747Z pulling e0a42594d802: 100% ▕██████████████████▏  358 B                         [K
+2026-06-30T00:21:14.9880519Z pulling dd084c7d92a3: 100% ▕██████████████████▏ 8.4 KB                         [K
+2026-06-30T00:21:14.9881206Z pulling 3116c5225075: 100% ▕██████████████████▏   77 B                         [K
+2026-06-30T00:21:14.9881878Z pulling b6ae5839783f: 100% ▕██████████████████▏  489 B                         [K
+2026-06-30T00:21:14.9882408Z verifying sha256 digest [K
+2026-06-30T00:21:14.9882825Z writing manifest [K
+2026-06-30T00:21:14.9883194Z success [K[?25h[?2026l
+2026-06-30T00:21:19.9971798Z ##[group]Run pipx install llm
+2026-06-30T00:21:19.9972257Z [36;1mpipx install llm[0m
+2026-06-30T00:21:19.9972627Z [36;1mllm install llm-ollama[0m
+2026-06-30T00:21:20.0003493Z shell: /usr/bin/bash -e ***0***
+2026-06-30T00:21:20.0003885Z env:
+2026-06-30T00:21:20.0004199Z   CARGO_TERM_COLOR: always
+2026-06-30T00:21:20.0004580Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:21:20.0004951Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:21:20.0005301Z   CACHE_ON_FAILURE: false
+2026-06-30T00:21:20.0005871Z ##[endgroup]
+2026-06-30T00:21:20.2745292Z creating virtual environment...
+2026-06-30T00:21:20.3677182Z installing llm...
+2026-06-30T00:21:25.9217093Z done! ✨ 🌟 ✨
+2026-06-30T00:21:25.9217729Z   installed package llm 0.31, installed using Python 3.12.3
+2026-06-30T00:21:25.9218333Z   These apps are now available
+2026-06-30T00:21:25.9218800Z     - llm
+2026-06-30T00:21:26.9496453Z Collecting llm-ollama
+2026-06-30T00:21:26.9983305Z   Downloading llm_ollama-0.16.1-py3-none-any.whl.metadata (10 kB)
+2026-06-30T00:21:27.0045941Z Requirement already satisfied: llm>=0.28 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm-ollama) (0.31)
+2026-06-30T00:21:27.0170889Z Collecting ollama>=0.6.0 (from llm-ollama)
+2026-06-30T00:21:27.0216070Z   Downloading ollama-0.6.2-py3-none-any.whl.metadata (5.8 kB)
+2026-06-30T00:21:27.0268695Z Requirement already satisfied: pydantic>=2 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm-ollama) (2.13.4)
+2026-06-30T00:21:27.0281210Z Requirement already satisfied: click in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (8.4.2)
+2026-06-30T00:21:27.0285879Z Requirement already satisfied: condense-json>=0.1.3 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (0.1.3)
+2026-06-30T00:21:27.0290401Z Requirement already satisfied: openai>=2.32.0 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (2.44.0)
+2026-06-30T00:21:27.0294865Z Requirement already satisfied: click-default-group>=1.2.3 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (1.2.4)
+2026-06-30T00:21:27.0299021Z Requirement already satisfied: sqlite-utils>=3.37 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (3.39)
+2026-06-30T00:21:27.0303355Z Requirement already satisfied: sqlite-migrate>=0.1a2 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (0.1b0)
+2026-06-30T00:21:27.0309333Z Requirement already satisfied: PyYAML in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (6.0.3)
+2026-06-30T00:21:27.0312980Z Requirement already satisfied: pluggy in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (1.6.0)
+2026-06-30T00:21:27.0316966Z Requirement already satisfied: python-ulid in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (3.1.0)
+2026-06-30T00:21:27.0320812Z Requirement already satisfied: setuptools in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (82.0.1)
+2026-06-30T00:21:27.0324486Z Requirement already satisfied: pip in /opt/pipx/shared/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (26.1.2)
+2026-06-30T00:21:27.0330032Z Requirement already satisfied: puremagic in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from llm>=0.28->llm-ollama) (2.2.0)
+2026-06-30T00:21:27.0346230Z Requirement already satisfied: httpx>=0.27 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from ollama>=0.6.0->llm-ollama) (0.28.1)
+2026-06-30T00:21:27.0355913Z Requirement already satisfied: anyio in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from httpx>=0.27->ollama>=0.6.0->llm-ollama) (4.14.1)
+2026-06-30T00:21:27.0360030Z Requirement already satisfied: certifi in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from httpx>=0.27->ollama>=0.6.0->llm-ollama) (2026.6.17)
+2026-06-30T00:21:27.0364731Z Requirement already satisfied: httpcore==1.* in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from httpx>=0.27->ollama>=0.6.0->llm-ollama) (1.0.9)
+2026-06-30T00:21:27.0368629Z Requirement already satisfied: idna in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from httpx>=0.27->ollama>=0.6.0->llm-ollama) (3.18)
+2026-06-30T00:21:27.0386370Z Requirement already satisfied: h11>=0.16 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from httpcore==1.*->httpx>=0.27->ollama>=0.6.0->llm-ollama) (0.16.0)
+2026-06-30T00:21:27.0407904Z Requirement already satisfied: distro<2,>=1.7.0 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from openai>=2.32.0->llm>=0.28->llm-ollama) (1.9.0)
+2026-06-30T00:21:27.0413728Z Requirement already satisfied: jiter<1,>=0.10.0 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from openai>=2.32.0->llm>=0.28->llm-ollama) (0.16.0)
+2026-06-30T00:21:27.0419199Z Requirement already satisfied: sniffio in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from openai>=2.32.0->llm>=0.28->llm-ollama) (1.3.1)
+2026-06-30T00:21:27.0423777Z Requirement already satisfied: tqdm>4 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from openai>=2.32.0->llm>=0.28->llm-ollama) (4.68.3)
+2026-06-30T00:21:27.0428836Z Requirement already satisfied: typing-extensions<5,>=4.14 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from openai>=2.32.0->llm>=0.28->llm-ollama) (4.15.0)
+2026-06-30T00:21:27.0472753Z Requirement already satisfied: annotated-types>=0.6.0 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from pydantic>=2->llm-ollama) (0.7.0)
+2026-06-30T00:21:27.0477628Z Requirement already satisfied: pydantic-core==2.46.4 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from pydantic>=2->llm-ollama) (2.46.4)
+2026-06-30T00:21:27.0491973Z Requirement already satisfied: typing-inspection>=0.4.2 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from pydantic>=2->llm-ollama) (0.4.2)
+2026-06-30T00:21:27.0539378Z Requirement already satisfied: sqlite-fts4 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from sqlite-utils>=3.37->llm>=0.28->llm-ollama) (1.0.3)
+2026-06-30T00:21:27.0545016Z Requirement already satisfied: tabulate in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from sqlite-utils>=3.37->llm>=0.28->llm-ollama) (0.10.0)
+2026-06-30T00:21:27.0549461Z Requirement already satisfied: python-dateutil in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from sqlite-utils>=3.37->llm>=0.28->llm-ollama) (2.9.0.post0)
+2026-06-30T00:21:27.0629225Z Requirement already satisfied: six>=1.5 in /opt/pipx/venvs/llm/lib/python3.12/site-packages (from python-dateutil->sqlite-utils>=3.37->llm>=0.28->llm-ollama) (1.17.0)
+2026-06-30T00:21:27.0755154Z Downloading llm_ollama-0.16.1-py3-none-any.whl (17 kB)
+2026-06-30T00:21:27.0807103Z Downloading ollama-0.6.2-py3-none-any.whl (15 kB)
+2026-06-30T00:21:27.1161077Z Installing collected packages: ollama, llm-ollama
+2026-06-30T00:21:27.1440398Z 
+2026-06-30T00:21:27.1466464Z Successfully installed llm-ollama-0.16.1 ollama-0.6.2
+2026-06-30T00:21:27.3165917Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-30T00:21:27.3167382Z ##[group]Run google-github-actions/auth@v2
+2026-06-30T00:21:27.3167783Z with:
+2026-06-30T00:21:27.3177721Z   credentials_json: ***
+2026-06-30T00:21:27.3178097Z   create_credentials_file: true
+2026-06-30T00:21:27.3178483Z   export_environment_variables: true
+2026-06-30T00:21:27.3178877Z   universe: googleapis.com
+2026-06-30T00:21:27.3179234Z   cleanup_credentials: true
+2026-06-30T00:21:27.3179587Z   access_token_lifetime: 3600s
+2026-06-30T00:21:27.3180073Z   access_token_scopes: https://www.googleapis.com/auth/cloud-platform
+2026-06-30T00:21:27.3180572Z   id_token_include_email: false
+2026-06-30T00:21:27.3180927Z env:
+2026-06-30T00:21:27.3181264Z   CARGO_TERM_COLOR: always
+2026-06-30T00:21:27.3181640Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:21:27.3182018Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:21:27.3182353Z   CACHE_ON_FAILURE: false
+2026-06-30T00:21:27.3182701Z ##[endgroup]
+2026-06-30T00:21:27.4151879Z Created credentials file at "/home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json"
+2026-06-30T00:21:27.4453954Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-30T00:21:27.4455774Z ##[group]Run google-github-actions/setup-gcloud@v2
+2026-06-30T00:21:27.4456285Z with:
+2026-06-30T00:21:27.4456608Z   version: latest
+2026-06-30T00:21:27.4456947Z   skip_install: false
+2026-06-30T00:21:27.4457311Z   skip_tool_cache: false
+2026-06-30T00:21:27.4457658Z env:
+2026-06-30T00:21:27.4457996Z   CARGO_TERM_COLOR: always
+2026-06-30T00:21:27.4458368Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:21:27.4458753Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:21:27.4459105Z   CACHE_ON_FAILURE: false
+2026-06-30T00:21:27.4459779Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:21:27.4460727Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:21:27.4461595Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:21:27.4462247Z   CLOUDSDK_CORE_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:27.4462722Z   CLOUDSDK_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:27.4463167Z   GCLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:27.4463591Z   GCP_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:27.4464037Z   GOOGLE_CLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:27.4464691Z ##[endgroup]
+2026-06-30T00:21:28.6821743Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/02ffdda7-f432-4583-bee6-7100d71e7c9b -f /home/runner/work/_temp/c8cea1f3-9928-4d40-a9f5-1e39562869f1
+2026-06-30T00:21:46.6873550Z Successfully authenticated
+2026-06-30T00:21:46.7149228Z ##[group]Run # ① シークレットが空でないか確認
+2026-06-30T00:21:46.7149700Z [36;1m# ① シークレットが空でないか確認[0m
+2026-06-30T00:21:46.7150112Z [36;1mif [ -z "$RAW_SECRET_DATA" ]; then[0m
+2026-06-30T00:21:46.7150642Z [36;1m  echo "❌ Error: M_DRIVE_SECRET is not set in GitHub Secrets."[0m
+2026-06-30T00:21:46.7151328Z [36;1m  echo "GitHubリポジトリの Settings > Secrets and variables > Actions で"[0m
+2026-06-30T00:21:46.7151882Z [36;1m  echo "M_DRIVE_SECRET を設定してください。"[0m
+2026-06-30T00:21:46.7152293Z [36;1m  exit 1[0m
+2026-06-30T00:21:46.7152617Z [36;1mfi[0m
+2026-06-30T00:21:46.7152925Z [36;1m[0m
+2026-06-30T00:21:46.7153276Z [36;1m# ② 本物の JSON 中身を client_secret.json として書き出す[0m
+2026-06-30T00:21:46.7153781Z [36;1mecho "$RAW_SECRET_DATA" > client_secret.json[0m
+2026-06-30T00:21:46.7154209Z [36;1m[0m
+2026-06-30T00:21:46.7154547Z [36;1m# 書き出したファイルが空でないか、JSONとして開始されているか簡易チェック[0m
+2026-06-30T00:21:46.7155083Z [36;1mif [[ $(head -c 1 client_secret.json) != "***" ]]; then[0m
+2026-06-30T00:21:46.7155955Z [36;1m  echo "❌ Error: client_secret.json does not start with '***'. Secret might be invalid."[0m
+2026-06-30T00:21:46.7156560Z [36;1m  exit 1[0m
+2026-06-30T00:21:46.7156897Z [36;1mfi[0m
+2026-06-30T00:21:46.7157209Z [36;1m[0m
+2026-06-30T00:21:46.7157540Z [36;1mmkdir -p data[0m
+2026-06-30T00:21:46.7157907Z [36;1mmkdir -p logs[0m
+2026-06-30T00:21:46.7158256Z [36;1m[0m
+2026-06-30T00:21:46.7158626Z [36;1m# ③ Googleドライブから最新の Parquet 台帳をダウンロード[0m
+2026-06-30T00:21:46.7159155Z [36;1mecho "📥 Downloading baseline data from Google Drive..."[0m
+2026-06-30T00:21:46.7159697Z [36;1mcargo run --release --bin download_drive[0m
+2026-06-30T00:21:46.7160138Z [36;1m[0m
+2026-06-30T00:21:46.7160472Z [36;1m# ④ 最新価格の超軽量同期 (デイリーモード)[0m
+2026-06-30T00:21:46.7160890Z [36;1mecho "🚀 Syncing latest market data..."[0m
+2026-06-30T00:21:46.7161366Z [36;1mcargo run --release --bin sync_yahoo[0m
+2026-06-30T00:21:46.7161785Z [36;1m[0m
+2026-06-30T00:21:46.7162103Z [36;1m# ⑤ AI分析実行[0m
+2026-06-30T00:21:46.7162497Z [36;1mecho "🧠 Running AI Scout analysis..."[0m
+2026-06-30T00:21:46.7162950Z [36;1mcargo run --release --bin ai_scout[0m
+2026-06-30T00:21:46.7163362Z [36;1m[0m
+2026-06-30T00:21:46.7163676Z [36;1m# 使い終わった認証ファイルを削除[0m
+2026-06-30T00:21:46.7164051Z [36;1mrm -f client_secret.json[0m
+2026-06-30T00:21:46.7198108Z shell: /usr/bin/bash -e ***0***
+2026-06-30T00:21:46.7198516Z env:
+2026-06-30T00:21:46.7198840Z   CARGO_TERM_COLOR: always
+2026-06-30T00:21:46.7199218Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:21:46.7199607Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:21:46.7199952Z   CACHE_ON_FAILURE: false
+2026-06-30T00:21:46.7200622Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:21:46.7201798Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:21:46.7202699Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:21:46.7203381Z   CLOUDSDK_CORE_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:46.7203861Z   CLOUDSDK_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:46.7204301Z   GCLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:46.7204730Z   GCP_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:46.7205170Z   GOOGLE_CLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:21:46.7205858Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+2026-06-30T00:21:46.7206366Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+2026-06-30T00:21:46.7207193Z   DISCORD_WEBHOOK_URL: ***
+2026-06-30T00:21:46.7209860Z   GDRIVE_TOKEN_CACHE: ***
+2026-06-30T00:21:46.7210241Z   GDRIVE_SECRET_JSON: client_secret.json
+2026-06-30T00:21:46.7212119Z   RAW_SECRET_DATA: ***
+2026-06-30T00:21:46.7212468Z ##[endgroup]
+2026-06-30T00:21:46.7301645Z 📥 Downloading baseline data from Google Drive...
+2026-06-30T00:21:46.8072944Z [1m[92m    Updating[0m crates.io index
+2026-06-30T00:21:48.5629018Z [1m[92m   Compiling[0m jp_stock_system v0.1.0 (/home/runner/work/jp_stock_system/jp_stock_system)
+2026-06-30T00:22:02.4973914Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 15.75s
+2026-06-30T00:22:02.5186770Z [1m[92m     Running[0m `target/release/download_drive`
+2026-06-30T00:22:02.5278710Z Reading credentials from file specified in GDRIVE_SECRET_JSON: client_secret.json
+2026-06-30T00:22:03.0826701Z 📥 Downloading processed_market_data.parquet (ID: 14XJseqjPvmLpCMZ4VK6nIiu2lAemj3wB)...
+2026-06-30T00:22:04.7935387Z ✅ Download successful: data/processed_market_data.parquet
+2026-06-30T00:22:04.7954243Z 🚀 Syncing latest market data...
+2026-06-30T00:22:05.0340779Z [1m[92m   Compiling[0m jp_stock_system v0.1.0 (/home/runner/work/jp_stock_system/jp_stock_system)
+2026-06-30T00:22:09.4728674Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 4.66s
+2026-06-30T00:22:09.4944020Z [1m[92m     Running[0m `target/release/sync_yahoo`
+2026-06-30T00:22:09.5050927Z 🚀 [Mode] デイリーモード (超軽量・最新分のみ同期します)
+2026-06-30T00:22:09.5052033Z 🚀 Starting Hybrid Data Sync (J-Quants + Yahoo Finance)...
+2026-06-30T00:22:09.5266448Z 📅 Last date in Parquet: 2026-06-11
+2026-06-30T00:22:09.6086733Z 🚀 Phase 2: Running lightweight bulk sync for today's prices...
+2026-06-30T00:22:34.7245118Z 🧠 Running AI Scout analysis...
+2026-06-30T00:22:34.9594930Z [1m[92m   Compiling[0m jp_stock_system v0.1.0 (/home/runner/work/jp_stock_system/jp_stock_system)
+2026-06-30T00:22:39.2896772Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 4.55s
+2026-06-30T00:22:39.3107489Z [1m[92m     Running[0m `target/release/ai_scout`
+2026-06-30T00:22:39.3213767Z 🛑 [🚨緊急停止ガードレール発動] 現在時刻は JST 09:22:39 です。
+2026-06-30T00:22:39.3214702Z 朝 8:55 までの事前予約に間に合わなかったため、本日の自動売買は安全のためにスキップします。
+2026-06-30T00:22:39.3215705Z （テスト等で強制実行したい場合は、環境変数 FORCE_RUN=true を指定してください）
+2026-06-30T00:22:39.3318240Z ##[group]Run if [ -n "$RAW_SECRET_DATA" ]; then
+2026-06-30T00:22:39.3318765Z [36;1mif [ -n "$RAW_SECRET_DATA" ]; then[0m
+2026-06-30T00:22:39.3319232Z [36;1m  echo "$RAW_SECRET_DATA" > client_secret.json[0m
+2026-06-30T00:22:39.3319654Z [36;1m[0m
+2026-06-30T00:22:39.3320014Z [36;1m  # マイドライブへ最新のParquetファイルをアップロード（上書き）[0m
+2026-06-30T00:22:39.3320478Z [36;1m  cargo run --release --bin upload_drive[0m
+2026-06-30T00:22:39.3320891Z [36;1m[0m
+2026-06-30T00:22:39.3321215Z [36;1m  rm -f client_secret.json[0m
+2026-06-30T00:22:39.3321594Z [36;1melse[0m
+2026-06-30T00:22:39.3322023Z [36;1m  echo "⚠️ Skipping upload because M_DRIVE_SECRET is not set."[0m
+2026-06-30T00:22:39.3322506Z [36;1mfi[0m
+2026-06-30T00:22:39.3353819Z shell: /usr/bin/bash -e ***0***
+2026-06-30T00:22:39.3354209Z env:
+2026-06-30T00:22:39.3354525Z   CARGO_TERM_COLOR: always
+2026-06-30T00:22:39.3355098Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:22:39.3355733Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:22:39.3356209Z   CACHE_ON_FAILURE: false
+2026-06-30T00:22:39.3356861Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:22:39.3357818Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:22:39.3358686Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:22:39.3359353Z   CLOUDSDK_CORE_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:39.3359822Z   CLOUDSDK_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:39.3360265Z   GCLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:39.3360675Z   GCP_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:39.3361108Z   GOOGLE_CLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:39.3361612Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+2026-06-30T00:22:39.3362102Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+2026-06-30T00:22:39.3364829Z   GDRIVE_TOKEN_CACHE: ***
+2026-06-30T00:22:39.3365198Z   GDRIVE_SECRET_JSON: client_secret.json
+2026-06-30T00:22:39.3367255Z   RAW_SECRET_DATA: ***
+2026-06-30T00:22:39.3367590Z ##[endgroup]
+2026-06-30T00:22:39.5838182Z [1m[92m   Compiling[0m jp_stock_system v0.1.0 (/home/runner/work/jp_stock_system/jp_stock_system)
+2026-06-30T00:22:51.1927716Z [1m[92m    Finished[0m `release` profile [optimized] target(s) in 11.84s
+2026-06-30T00:22:51.2135347Z [1m[92m     Running[0m `target/release/upload_drive`
+2026-06-30T00:22:51.2228290Z Reading credentials from file specified in GDRIVE_SECRET_JSON: client_secret.json
+2026-06-30T00:22:51.2229599Z Restoring tokencache.json from environment variable
+2026-06-30T00:22:51.5356746Z 📊 ストレージ状況: 使用量 261017176 / 全容量 16106127360
+2026-06-30T00:22:51.8289384Z 🔄 上書きアップロード中 (ID: 14XJseqjPvmLpCMZ4VK6nIiu2lAemj3wB)...
+2026-06-30T00:22:55.2590073Z ✅ 上書き成功！
+2026-06-30T00:22:55.2852149Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-30T00:22:55.2853619Z ##[group]Run actions/upload-artifact@v4
+2026-06-30T00:22:55.2854020Z with:
+2026-06-30T00:22:55.2854358Z   name: ai-scout-results-scout_and_analyze
+2026-06-30T00:22:55.2854773Z   path: *.csv
+*.txt
+
+2026-06-30T00:22:55.2855120Z   retention-days: 7
+2026-06-30T00:22:55.2855854Z   if-no-files-found: warn
+2026-06-30T00:22:55.2856244Z   compression-level: 6
+2026-06-30T00:22:55.2856587Z   overwrite: false
+2026-06-30T00:22:55.2856930Z   include-hidden-files: false
+2026-06-30T00:22:55.2857287Z env:
+2026-06-30T00:22:55.2857598Z   CARGO_TERM_COLOR: always
+2026-06-30T00:22:55.2857968Z   CARGO_HOME: /home/runner/.cargo
+2026-06-30T00:22:55.2858394Z   CARGO_INCREMENTAL: 0
+2026-06-30T00:22:55.2858732Z   CACHE_ON_FAILURE: false
+2026-06-30T00:22:55.2859386Z   CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:22:55.2860321Z   GOOGLE_APPLICATION_CREDENTIALS: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:22:55.2861178Z   GOOGLE_GHA_CREDS_PATH: /home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json
+2026-06-30T00:22:55.2861829Z   CLOUDSDK_CORE_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:55.2862298Z   CLOUDSDK_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:55.2862744Z   GCLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:55.2863180Z   GCP_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:55.2863617Z   GOOGLE_CLOUD_PROJECT: affable-beaker-490113-f6
+2026-06-30T00:22:55.2864128Z   CLOUDSDK_METRICS_ENVIRONMENT: github-actions-setup-gcloud
+2026-06-30T00:22:55.2864837Z   CLOUDSDK_METRICS_ENVIRONMENT_VERSION: 2.2.1
+2026-06-30T00:22:55.2865239Z ##[endgroup]
+2026-06-30T00:22:55.4531965Z (node:3009) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-30T00:22:55.4532834Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-30T00:22:55.4620589Z ##[warning]No files were found with the provided path: *.csv
+*.txt. No artifacts will be uploaded.
+2026-06-30T00:22:55.5031866Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-30T00:22:55.5033292Z Post job cleanup.
+2026-06-30T00:22:55.5930461Z Removed exported credentials at "/home/runner/work/jp_stock_system/jp_stock_system/gha-creds-208e163337408f6c.json".
+2026-06-30T00:22:55.6278436Z Post job cleanup.
+2026-06-30T00:22:55.9057134Z Cache up-to-date.
+2026-06-30T00:22:55.9060482Z (node:3033) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-30T00:22:55.9061532Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-30T00:22:55.9493796Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-30T00:22:55.9496356Z Post job cleanup.
+2026-06-30T00:22:56.0334968Z [command]/usr/bin/git version
+2026-06-30T00:22:56.0373794Z git version 2.54.0
+2026-06-30T00:22:56.0412468Z Temporarily overriding HOME='/home/runner/work/_temp/40517238-2189-4cb4-aa05-ddbfc9549fe3' before making global git config changes
+2026-06-30T00:22:56.0413578Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-30T00:22:56.0418109Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/jp_stock_system/jp_stock_system
+2026-06-30T00:22:56.0455724Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-30T00:22:56.0489571Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-30T00:22:56.0724297Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-30T00:22:56.0753194Z http.https://github.com/.extraheader
+2026-06-30T00:22:56.0764337Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-06-30T00:22:56.0794950Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-30T00:22:56.1046231Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-06-30T00:22:56.1078202Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-06-30T00:22:56.1453238Z Cleaning up orphan processes
+2026-06-30T00:22:56.1780697Z Terminate orphan process: pid (2521) (ollama)
+2026-06-30T00:22:56.1789466Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4, google-github-actions/auth@v2, google-github-actions/setup-gcloud@v2. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

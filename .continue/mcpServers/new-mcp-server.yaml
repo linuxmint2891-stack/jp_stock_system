@@ -1,0 +1,35 @@
+name: Local Config
+
+version: 1.0.0
+
+schema: v1
+
+models: 
+
+  - name: Gemma4 12B
+
+provider: ollama
+
+model: gemma4:12b
+
+contextLength: 32768
+
+capabilities:
+
+      - edit
+
+      - tool_use
+
+mcpServers:
+
+  - name: filesystem
+
+command: npx
+
+args:
+
+      - -y
+
+      - "@modelcontextprotocol/server-filesystem"
+
+      - "/Users/mitiharuokazaki/Desktop/jp_stock_system"
