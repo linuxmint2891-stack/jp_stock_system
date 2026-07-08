@@ -76,9 +76,9 @@ jobs:
         echo "📥 Downloading baseline data from Google Drive..."
         cargo run --release --bin download_drive
 
-        # ④ 最新価格の同期 (メンテナンスモードを強制指定)
+        # ④ 最新価格の同期 (引数全体をクォーテーションで囲い、cargoのパースエラーを防ぐ)
         echo "🚀 Syncing latest market data (Full Maintenance Mode)..."
-        cargo run --release --bin sync_yahoo --maintenance
+        cargo run --release --bin sync_yahoo -- "--maintenance"
 
         # ⑤ AI分析実行
         echo "🧠 Running AI Scout analysis..."
