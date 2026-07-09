@@ -231,7 +231,9 @@ async fn main() -> Result<()> {
     let prices = scout_candidates.column("AdjC")?.f64()?;
     let changes = scout_candidates.column("Change(%)")?.f64()?;
 
-    for i in 0..scout_candidates.height() {
+    let total_candidates = scout_candidates.height();
+
+    for i in 0..total_candidates {
         let raw_code = codes.get(i).unwrap_or("");
         // 銘柄コードを4桁に標準化 (5桁・6桁の場合は先頭4桁を切り出す)
         let code = if raw_code.len() > 4 { &raw_code[0..4] } else { raw_code };
@@ -261,8 +263,6 @@ async fn main() -> Result<()> {
                 writeln!(log_file, "{}", res_text)?;
 
                 // Discord通知 (新モジュールを使用)
-                // すべての結果を通知するか、GOのみにするかは運用に合わせて調整可能
-                // ここでは実装案に従い、GO判定またはガードレール発動などの重要情報を通知
                 let ticker_label = format!("{} ({})", name, code);
                 let combined_reason = format!("{}\n\nリスク: {}", result.reasons.join(" / "), result.risk_factor);
                 
@@ -292,6 +292,13 @@ async fn main() -> Result<()> {
                 eprintln!("{}", err_msg);
                 writeln!(log_file, "{}", err_msg)?;
             }
+        }
+
+        // 🚨 429 エラー (Too Many Requests) 回避用ガードレール
+        // 最後のループ要素以外で、APIの無料枠制限を回避するため20秒待機を入れる
+        if i < total_candidates - 1 {
+            println!("⏳ [API Rate Limit Guard] 429エラーを回避するため、次の銘柄分析まで20秒待機します...");
+            tokio::time::sleep(std::time::Duration::from_secs(20)).await;
         }
     }
 
