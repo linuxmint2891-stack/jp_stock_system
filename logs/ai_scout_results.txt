@@ -437,3 +437,36 @@
 🤖 AI判定: NO-GO (スコア: 0.30)
 📝 理由: [Guardrail Triggered: No Distinct Material] / 浜木綿の決算速報が公開された。 / 前日比がプラスである。
 ⚠️ リスク: 浜木綿の決算速報に関する詳細な情報が不足しているため、材料の質を評価できない。
+==================================================
+🚀 AI Scout Execution: 2026-07-09 00:38:48
+==================================================
+
+--- [銘柄分析] 3825 リミックスポイント (価格: 201円, 前日比: 33.11%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 9331 キャスター (価格: 1308円, 前日比: 25.41%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 4179 ジーネクスト (価格: 420円, 前日比: 23.53%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 6634 ネクスグループ (価格: 61円, 前日比: 22.00%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 4346 ＮＥＸＹＺ．Ｇｒｏｕｐ (価格: 873円, 前日比: 20.75%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 9444 トーシンホールディングス (価格: 271円, 前日比: 19.38%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 4446 Ｌｉｎｋ－Ｕグループ (価格: 695円, 前日比: 16.81%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 3624 アクセルマーク (価格: 61円, 前日比: 15.09%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 5132 ｐｌｕｓｚｅｒｏ (価格: 1558円, 前日比: 11.44%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
+
+--- [銘柄分析] 3133 海帆 (価格: 126円, 前日比: 9.57%) ---
+⚠️ AI分析失敗: AI分析エラー: Neither GEMINI_API_KEY nor GOOGLE_API_KEY environment variable is set
