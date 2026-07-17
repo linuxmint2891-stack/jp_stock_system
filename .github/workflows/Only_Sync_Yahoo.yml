@@ -19,7 +19,9 @@ jobs:
       # もしGoogle Driveからのベースライン取得が必要な場合はこのステップを残します
       - name: 📥 Download baseline from Google Drive
         env:
-          GDRIVE_SECRET_JSON: ${{ secrets.GDRIVE_SECRET_JSON }} # 適切なシークレット名に調整してください
+          # 💡 左側（環境変数名）はシステムが求める「GDRIVE_SECRET_JSON」のまま、
+          #    右側（シークレット名）を実際の「M_DRIVE_SECRET」に変更します。
+          GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
         run: |
           cargo run --release --bin download_drive
 
