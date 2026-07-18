@@ -1,6 +1,5 @@
 name: 🔄 Sync Yahoo Data Only
 
-# GitHubの画面に「Run workflow」ボタンを出現させます
 on:
   workflow_dispatch:
 
@@ -16,18 +15,24 @@ jobs:
         with:
           toolchain: stable
 
-      # Rustのビルドキャッシュを高機能に管理（2回目以降の爆速化）
       - name: 💾 Rust Cache
         uses: swatinem/rust-cache@v2
 
-      # 正しいシークレット名（M_DRIVE_SECRET）をシステム側の環境変数にマッピング
+      # 1. まず現在のベースラインを落とす
       - name: 📥 Download baseline from Google Drive
         env:
           GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
         run: |
           cargo run --release --bin download_drive
 
-      # Yahooデータの同期実行
+      # 2. 修正した超軽量ロジックで差分同期 (数分で終わります)
       - name: 🚀 Run sync_yahoo only
         run: |
           cargo run --release --bin sync_yahoo
+
+      # 3. 🔥【最重要】同期した最新データをDriveへ書き戻す
+      - name: 📤 Upload updated data to Google Drive
+        env:
+          GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
+        run: |
+          cargo run --release --bin upload_drive
