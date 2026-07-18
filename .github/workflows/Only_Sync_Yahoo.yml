@@ -6,6 +6,13 @@ on:
 jobs:
   sync_data:
     runs-on: ubuntu-latest
+    # 🔥 jobsのすぐ下にstrategyを配置する
+    strategy:
+      matrix:
+        range: ["1000-3000", "3001-6000", "6001-9999"]
+      # 1つの範囲がコケても他を巻き添えにしない設定
+      fail-fast: false
+
     steps:
       - name: 📂 Checkout repository
         uses: actions/checkout@v4
@@ -17,6 +24,9 @@ jobs:
 
       - name: 💾 Rust Cache
         uses: swatinem/rust-cache@v2
+        with:
+          # マトリックスごとにキャッシュを分けるためのキー
+          key: ${{ matrix.range }}
 
       # 1. まず現在のベースラインを落とす
       - name: 📥 Download baseline from Google Drive
@@ -25,10 +35,10 @@ jobs:
         run: |
           cargo run --release --bin download_drive
 
-      # 2. 修正した超軽量ロジックで差分同期 (数分で終わります)
+      # 2. 修正した超軽量ロジックで差分同期 (マトリックスで並列実行)
       - name: 🚀 Run sync_yahoo only
         run: |
-          cargo run --release --bin sync_yahoo
+          cargo run --release --bin sync_yahoo -- --range ${{ matrix.range }}
 
       # 3. 🔥【最重要】同期した最新データをDriveへ書き戻す
       - name: 📤 Upload updated data to Google Drive
