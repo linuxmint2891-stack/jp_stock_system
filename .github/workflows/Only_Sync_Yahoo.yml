@@ -10,8 +10,19 @@ jobs:
     strategy:
       matrix:
         range: ["1000-3000", "3001-6000", "6001-9999"]
-      # 1つの範囲がコケても他を巻き添えにしない設定
       fail-fast: false
+
+    steps:
+      # （中略）
+      
+      - name: 📥 Download
+        run: cargo run --release --bin download_drive -- --range ${{ matrix.range }}
+
+      - name: 🚀 Run sync_yahoo
+        run: cargo run --release --bin sync_yahoo -- --range ${{ matrix.range }}
+
+      - name: 📤 Upload
+        run: cargo run --release --bin upload_drive -- --range ${{ matrix.range }}
 
     steps:
       - name: 📂 Checkout repository
