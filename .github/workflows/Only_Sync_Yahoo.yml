@@ -1,6 +1,6 @@
 name: 🔄 Sync Yahoo Data Only
 
-# 💡 これを書くことで、GitHubの画面に「Run workflow」ボタンが出現します
+# GitHubの画面に「Run workflow」ボタンを出現させます
 on:
   workflow_dispatch:
 
@@ -8,23 +8,26 @@ jobs:
   sync_data:
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout code
+      - name: 📂 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🦀 Setup Rust toolchain
+      - name: ⚙️ Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          cache: true
+          toolchain: stable
 
-      # もしGoogle Driveからのベースライン取得が必要な場合はこのステップを残します
+      # Rustのビルドキャッシュを高機能に管理（2回目以降の爆速化）
+      - name: 💾 Rust Cache
+        uses: swatinem/rust-cache@v2
+
+      # 正しいシークレット名（M_DRIVE_SECRET）をシステム側の環境変数にマッピング
       - name: 📥 Download baseline from Google Drive
         env:
-          # 💡 左側（環境変数名）はシステムが求める「GDRIVE_SECRET_JSON」のまま、
-          #    右側（シークレット名）を実際の「M_DRIVE_SECRET」に変更します。
           GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
         run: |
           cargo run --release --bin download_drive
 
+      # Yahooデータの同期実行
       - name: 🚀 Run sync_yahoo only
         run: |
           cargo run --release --bin sync_yahoo
