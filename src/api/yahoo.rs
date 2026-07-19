@@ -1,8 +1,47 @@
 use crate::model::ohlc::OHLC;
+use anyhow::{bail, Result};
 use reqwest::Client;
 use std::time::Duration;
 use regex::Regex;
 use chrono::{TimeZone, Utc, NaiveDate};
+
+/// Yahoo FinanceのQuote APIから複数銘柄の現在価格と出来高を取得する。
+/// 戻り値の銘柄コードは、呼び出し側のParquetと揃う4桁コードに正規化する。
+pub async fn fetch_yahoo_bulk(client: &Client, symbols: &[String]) -> Result<Vec<(String, f64, f64)>> {
+    if symbols.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let url = "https://query1.finance.yahoo.com/v7/finance/quote";
+    let response = client
+        .get(url)
+        .query(&[("symbols", symbols.join(","))])
+        .header("User-Agent", "Mozilla/5.0")
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        bail!("Yahoo bulk quote request failed with status {}", response.status());
+    }
+
+    let body: serde_json::Value = response.json().await?;
+    let results = body["quoteResponse"]["result"]
+        .as_array()
+        .ok_or_else(|| anyhow::anyhow!("Yahoo bulk quote response has no result array"))?;
+
+    let quotes = results
+        .iter()
+        .filter_map(|quote| {
+            let symbol = quote["symbol"].as_str()?;
+            let price = quote["regularMarketPrice"].as_f64()?;
+            let volume = quote["regularMarketVolume"].as_f64()?;
+            let code = symbol.strip_suffix(".T").unwrap_or(symbol).to_string();
+            Some((code, price, volume))
+        })
+        .collect();
+
+    Ok(quotes)
+}
 
 pub async fn fetch_ohlc(client: &Client, symbol: &str, start_timestamp: i64) -> Vec<OHLC> {
     let clean_symbol = symbol.replace(".T", "");
