@@ -4,6 +4,8 @@ use jp_stock_system::api::jquants::fetch_daily_bars;
 use jp_stock_system::api::yahoo::fetch_ohlc;
 use jp_stock_system::alpha::{alpha_a, alpha_b};
 use jp_stock_system::utils::settings::Settings;
+use jp_stock_system::utils::get_unique_codes;
+use jp_stock_system::api::yahoo::fetch_yahoo_bulk;
 use std::fs;
 use std::path::Path;
 use clap::Parser;
@@ -89,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
     let jquants_end_date = today - Duration::days(85);
     let mut current_date = start_date;
 
-    if current_date < jquants_end_date {
+    if current_date < jquants_end_date && !api_key.trim().is_empty() {
         println!("📊 Phase 1: Syncing up to {} using J-Quants Bulk API...", jquants_end_date);
         
         while current_date < jquants_end_date {
@@ -127,10 +129,19 @@ async fn main() -> anyhow::Result<()> {
             tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
             current_date += Duration::days(1);
         }
+    } else if current_date < jquants_end_date {
+        println!("ℹ️ J-Quants APIキーが未設定のため、J-Quantsによる履歴同期をスキップします。");
     }
 
     // --- STEP 2: Yahoo Zone (Direct or Bulk) ---
-    let yahoo_start_date = if current_date > jquants_end_date { current_date } else { jquants_end_date };
+    let yahoo_start_date = if api_key.trim().is_empty() {
+        // J-Quantsを使わない構成では、Yahoo側に全対象期間を委ねる。
+        start_date
+    } else if current_date > jquants_end_date {
+        current_date
+    } else {
+        jquants_end_date
+    };
     
     if yahoo_start_date <= today {
         let codes = get_unique_codes(PARQUET_PATH)?;
@@ -227,5 +238,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-// --- 以下、fetch_yahoo_bulk と get_unique_codes は変更なしのため省略 ---
