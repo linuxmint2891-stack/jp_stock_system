@@ -7,3 +7,4 @@ pub mod news_crawler;
 pub mod notifier;
 pub mod paper_trade;
 pub mod db;
+pub mod engine;

@@ -255,3 +255,107 @@ pub async fn notify_order_execution(
     client.post(&webhook_url).json(&payload).send().await?;
     Ok(())
 }
+
+/// 📊 【AIペーパートレード 運用パフォーマンス報告】 をDiscordへ送信する
+pub async fn notify_portfolio_summary_report(
+    date: &str,
+    positions: &[(String, String, f64, f64, i64, f64, f64)], // (code, name, entry_price, current_price, qty, pl_amount, pl_pct)
+    total_unrealized: f64,
+    total_realized: f64,
+    total_trades: i64,
+    win_trades: i64,
+    win_rate: f64,
+    profit_factor: f64,
+) -> Result<(), reqwest::Error> {
+    let webhook_url = match env::var("DISCORD_WEBHOOK_URL") {
+        Ok(url) => url,
+        Err(_) => return Ok(()),
+    };
+
+    let color = if total_realized + total_unrealized >= 0.0 {
+        15844367 // 金色 (Hex: #f1c40f)
+    } else {
+        9807270  // グレー (Hex: #95a5a6)
+    };
+
+    let mut description = format!(
+        "📅 **集計日**: {}\n\n**現時点での保有ポジション (含み損益):**\n",
+        date
+    );
+
+    if positions.is_empty() {
+        description.push_str("• なし\n");
+    } else {
+        for (code, name, entry_price, current_price, qty, pl_amount, pl_pct) in positions {
+            description.push_str(&format!(
+                "• **{} {}** ({}株)\n  購入: {:.1}円 -> 現在: {:.1}円 ({:+.2}%) | 評価損益: {:+.0}円\n",
+                code, name, qty, entry_price, current_price, pl_pct, pl_amount
+            ));
+        }
+    }
+
+    description.push_str("\n-----------------------------------------\n");
+    description.push_str(&format!(
+        "💰 **資産状況サマリー:**\n• 総含み損益 (評価損益) : **{:+.0} 円**\n• 通算確定損益 (実現損益) : **{:+.0} 円**\n\n",
+        total_unrealized, total_realized
+    ));
+
+    description.push_str(&format!(
+        "📈 **AIスコア運用の通算成績:**\n• 総トレード回数 : {} 回\n• 勝敗 : {}勝 {}敗 (勝率: {:.1}%)\n• プロフィットファクター : {:.2}",
+        total_trades,
+        win_trades,
+        total_trades - win_trades,
+        win_rate,
+        profit_factor
+    ));
+
+    let payload = DiscordWebhookPayload {
+        username: "株AIスカウトシステム".to_string(),
+        avatar_url: None,
+        embeds: vec![DiscordEmbed {
+            title: "📊 AIペーパートレード 運用パフォーマンス報告".to_string(),
+            description,
+            color,
+            fields: vec![],
+        }],
+    };
+
+    let client = reqwest::Client::new();
+    client.post(&webhook_url).json(&payload).send().await?;
+    Ok(())
+}
+
+/// 📊 ポートフォリオのサマリー（テキスト）をファイルとしてDiscordに添付送信する
+pub async fn send_portfolio_file_to_discord(
+    webhook_url: &str,
+    file_path: &str,
+    message_content: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let client = reqwest::Client::new();
+    use reqwest::multipart;
+
+    // 1. 送信するファイルをバイト列として読み込む
+    let file_bytes = std::fs::read(file_path)?;
+    let file_part = multipart::Part::bytes(file_bytes)
+        .file_name("portfolio_report.txt")
+        .mime_str("text/plain")?;
+
+    // 2. マルチパートフォームを作成
+    let form = multipart::Form::new()
+        .text("content", message_content.to_string())
+        .part("file", file_part);
+
+    // 3. WebhookにPOSTリクエストを送信
+    let response = client.post(webhook_url).multipart(form).send().await?;
+
+    if response.status().is_success() {
+        println!("🚀 Discordにポートフォリオのファイルログを送信しました。");
+    } else {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        eprintln!("❌ Discordへのファイル送信に失敗しました: {} - {}", status, body);
+    }
+
+    Ok(())
+}
+
