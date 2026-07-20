@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let jst_offset = FixedOffset::east_opt(9 * 3600).unwrap();
     let now = Utc::now().with_timezone(&jst_offset);
     let force_run = std::env::var("FORCE_RUN").is_ok();
-    if !force_run && (now.hour() >= 9 || (now.hour() == 8 && now.minute() >= 55)) {
+    if!force_run && (now.hour() >= 9 || (now.hour() == 8 && now.minute() >= 55)) {
         println!("🛑 [🚨緊急停止ガードレール発動] 現在時刻は JST {} です。", now.format("%H:%M:%S"));
         println!("朝 8:55 までの事前予約に間に合わなかったため、本日の自動売買は安全のためにスキップします。");
         println!("（テスト等で強制実行したい場合は、環境変数 FORCE_RUN=true を指定してください）");
@@ -39,9 +39,9 @@ async fn main() -> Result<()> {
     let log_path = "logs/ai_scout_results.txt";
     std::fs::create_dir_all("logs")?;
     let mut log_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)?;
+        create(true)
+        append(true)
+        open(log_path)?;
 
     let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     writeln!(log_file, "\n==================================================")?;
@@ -66,21 +66,21 @@ async fn main() -> Result<()> {
 
     // 1. マスターデータの読み込み
     let master_df = LazyCsvReader::new(master_data_path)
-        .with_has_header(true)
-        .finish()?
-        .collect()?;
+        with_has_header(true)
+        finish()?
+        collect()?;
 
     let all_cols: Vec<String> = master_df.get_column_names().iter().map(|s| s.to_string()).collect();
     
     let code_col = all_cols.iter()
-        .find(|s| s.as_str() == "コード" || s.as_str() == "Code")
-        .cloned()
-        .unwrap_or_else(|| all_cols[1].clone());
+        find(|s| s.as_str() == "コード" || s.as_str() == "Code")
+        cloned()
+        unwrap_or_else(|| all_cols[1].clone());
 
     let name_col = all_cols.iter()
-        .find(|s| s.as_str() == "銘柄名" || s.as_str() == "Name")
-        .cloned()
-        .unwrap_or_else(|| all_cols[2].clone());
+        find(|s| s.as_str() == "銘柄名" || s.as_str() == "Name")
+        cloned()
+        unwrap_or_else(|| all_cols[2].clone());
 
     let master_lf = master_df.lazy().select([
         col(&code_col).cast(DataType::String).str().slice(lit(0), lit(4)).alias("JoinCode"),
@@ -89,7 +89,7 @@ async fn main() -> Result<()> {
     ]);
 
     // 2. 市場データの読み込みと統合
-    if !std::path::Path::new(market_data_path).exists() {
+    if!std::path::Path::new(market_data_path).exists() {
         println!("⚠️ 市場データ(Parquet)が見つかりません。処理をスキップして正常終了します。");
         return Ok(());
     }
@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
     };
 
     let schema = jquants_lf_raw.schema()?;
-    if !schema.contains("AdjC") {
+    if!schema.contains("AdjC") {
         println!("⚠️ CI/ダミー環境のため、必要な市場データ(AdjC)が存在しません。処理をスキップして正常終了します。");
         return Ok(());
     }
@@ -125,16 +125,16 @@ async fn main() -> Result<()> {
 
     let mut jquants_lf = jquants_lf_raw.select(select_cols);
 
-    if !has_news_col {
+    if!has_news_col {
         jquants_lf = jquants_lf.with_column(lit("").alias("news_text"));
     }
 
     let mut market_lfs = vec![jquants_lf];
     if std::path::Path::new(yahoo_data_path).exists() {
         let yahoo_lf = LazyCsvReader::new(yahoo_data_path)
-            .finish()?
-            .lazy()
-            .select([
+            finish()?
+            lazy()
+            select([
                 col("Date"),
                 col("Code").cast(DataType::String).alias("Code"),
                 col("Code").cast(DataType::String).str().slice(lit(0), lit(4)).alias("ShortCode"),
@@ -150,21 +150,21 @@ async fn main() -> Result<()> {
 
     // 3. 計算と結合
     let base_lf = combined_lf
-        .sort(["ShortCode", "Date"], SortMultipleOptions::default())
-        .with_columns([
+        sort(["ShortCode", "Date"], SortMultipleOptions::default())
+        with_columns([
             ((col("AdjC") / col("AdjC").shift(lit(1)) - lit(1.0)) * lit(100.0))
-                .over([col("ShortCode")])
-                .alias("Change(%)"),
+                over([col("ShortCode")])
+                alias("Change(%)"),
             col("AdjC")
-                .rolling_mean(RollingOptionsFixedWindow {
+                rolling_mean(RollingOptionsFixedWindow {
                     window_size: 5,
                     min_periods: 1,
-                    ..Default::default()
+                    Default::default()
                 })
-                .over([col("ShortCode")])
-                .alias("MA5"),
+                over([col("ShortCode")])
+                alias("MA5"),
         ])
-        .left_join(master_lf, col("ShortCode"), col("JoinCode"));
+        left_join(master_lf, col("ShortCode"), col("JoinCode"));
 
     // 4. Scout抽出
     let latest_date_df = base_lf.clone().select([col("Date").max()]).collect()?;
@@ -173,23 +173,23 @@ async fn main() -> Result<()> {
     
     let today_str = Local::now().format("%Y-%m-%d").to_string();
     println!("📅 Latest date in data: {}", latest_date_str);
-    if latest_date_str != today_str {
+    if latest_date_str!= today_str {
         println!("⚠️  Warning: Data is not up-to-date (Latest: {}, Today: {}).", latest_date_str, today_str);
-        println!("⚠️  Please run 'sync_yahoo' if you need today's momentum stocks.");
+        println!("⚠️  Please run 'ync_yahoo' if you need today's momentum stocks.");
     }
 
     println!("🔍 Screening for momentum stocks (Price < 2000, Turnover > 100M, Above MA5, Change > 1%)...");
     let scout_candidates = base_lf
-        .filter(col("Date").eq(lit(latest_date_str.clone())))
-        .filter(
+        filter(col("Date").eq(lit(latest_date_str.clone())))
+        filter(
             col("AdjC").lt(lit(2000.0))           // 低・中位株
-            .and(col("Va").gt(lit(100_000_000.0))) // 流動性あり
-            .and(col("AdjC").gt(col("MA5")))      // 5日線の上
-            .and(col("Change(%)").gt(lit(1.0)))    // 1%以上の上昇
+            and(col("Va").gt(lit(100_000_000.0))) // 流動性あり
+            and(col("AdjC").gt(col("MA5")))      // 5日線の上
+            and(col("Change(%)").gt(lit(1.0)))    // 1%以上の上昇
         )
-        .sort(["Change(%)"], SortMultipleOptions::default().with_order_descending(true))
-        .limit(10) // ニュース取得対象を少し多めに取る
-        .collect()?;
+        sort(["Change(%)"], SortMultipleOptions::default().with_order_descending(true))
+        limit(10) // ニュース取得対象を少し多めに取る
+        collect()?;
     
     if scout_candidates.height() == 0 {
         println!("ℹ️  No potential momentum stocks found for {}.", latest_date_str);
@@ -200,16 +200,16 @@ async fn main() -> Result<()> {
 
     // --- 追加: リアルタイムニュースの取得とマージ ---
     let candidate_codes: Vec<String> = scout_candidates.column("Code")?
-        .str()?
-        .into_no_null_iter()
-        .map(|s| s.to_string())
-        .collect();
+        str()?
+        into_no_null_iter()
+        map(|s| s.to_string())
+        collect();
 
     println!("\n📡 抽出された銘柄の最新ニュースをリアルタイム取得します...");
     let real_news = jp_stock_system::news_crawler::fetch_real_news_for_codes(&candidate_codes).await;
     
     // 取得したニュースをParquetにマージ（永続化）
-    if !real_news.is_empty() {
+    if!real_news.is_empty() {
         jp_stock_system::news_merger::merge_news_to_parquet(market_data_path, real_news.clone())?;
         println!("✅ 最新ニュースを {} にマージしました。", market_data_path);
     }
