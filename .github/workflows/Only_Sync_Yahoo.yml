@@ -1,0 +1,45 @@
+name: 🔄 Sync Yahoo Data Only
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync_data:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        range: ["1000-3000", "3001-6000", "6001-9999"]
+      fail-fast: false
+      
+    steps:
+      - name: 📂 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: 💾 Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.range }}
+
+      # 1. まず現在のベースラインを落とす（引数に範囲を渡して競合を防ぐ）
+      - name: 📥 Download baseline from Google Drive
+        env:
+          GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
+        run: |
+          cargo run --release --bin download_drive -- --range ${{ matrix.range }}
+
+      # 2. 修正した超軽量ロジックで差分同期 (マトリックスで並列実行)
+      - name: 🚀 Run sync_yahoo only
+        run: |
+          cargo run --release --bin sync_yahoo -- --range ${{ matrix.range }}
+
+      # 3. 🔥 同期した最新データをDriveへ書き戻す（引数に範囲を渡して競合を防ぐ）
+      - name: 📤 Upload updated data to Google Drive
+        env:
+          GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
+        run: |
+          cargo run --release --bin upload_drive -- --range ${{ matrix.range }}

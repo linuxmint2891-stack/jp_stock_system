@@ -5,7 +5,12 @@ use jp_stock_system::api::jquants::fetch_daily_bars;
 use jp_stock_system::api::yahoo::fetch_ohlc;
 use jp_stock_system::utils::get_unique_codes;
 use jp_stock_system::utils::settings::Settings;
+<<<<<<< HEAD
 use polars::prelude::*;
+=======
+use jp_stock_system::utils::get_unique_codes;
+use jp_stock_system::api::yahoo::fetch_yahoo_bulk;
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
 use std::fs;
 use std::path::Path;
 use google_drive3::{api::File, DriveHub};
@@ -61,7 +66,11 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. 同期範囲の決定
     let today = Local::now().naive_local().date();
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
     // 🔥【強力なガード】デイリーモードかつ、すでに最新データ（今日か昨日）がある場合は即終了！
     if !args.maintenance && file_exists {
         let gap_days = (today - last_date).num_days();
@@ -101,11 +110,16 @@ async fn main() -> anyhow::Result<()> {
     let mut current_date = start_date;
 
     if current_date < jquants_end_date && !api_key.trim().is_empty() {
+<<<<<<< HEAD
         println!(
             "📊 Phase 1: Syncing up to {} using J-Quants Bulk API...",
             jquants_end_date
         );
 
+=======
+        println!("📊 Phase 1: Syncing up to {} using J-Quants Bulk API...", jquants_end_date);
+        
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
         while current_date < jquants_end_date {
             if current_date.weekday().number_from_monday() > 5 {
                 current_date += Duration::days(1);
@@ -151,7 +165,11 @@ async fn main() -> anyhow::Result<()> {
         println!("ℹ️ J-Quants APIキーが未設定のため、J-Quantsによる履歴同期をスキップします。");
     }
 
+<<<<<<< HEAD
     // --- STEP 2: Yahoo Zone (個別銘柄の履歴ページから取得) ---
+=======
+    // --- STEP 2: Yahoo Zone (Direct or Bulk) ---
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
     let yahoo_start_date = if api_key.trim().is_empty() {
         // J-Quantsを使わない構成では、Yahoo側に全対象期間を委ねる。
         start_date
@@ -160,7 +178,11 @@ async fn main() -> anyhow::Result<()> {
     } else {
         jquants_end_date
     };
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
     if yahoo_start_date <= today {
         let codes = get_unique_codes(PARQUET_PATH)?;
         if codes.is_empty() {
@@ -168,6 +190,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         if args.maintenance {
+<<<<<<< HEAD
             println!(
                 "🧹 Phase 2: Running full maintenance sync for {} codes...",
                 codes.len()
@@ -176,6 +199,11 @@ async fn main() -> anyhow::Result<()> {
                 .from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap())
                 .timestamp();
 
+=======
+            println!("🧹 Phase 2: Running full maintenance sync for {} codes...", codes.len());
+            let yahoo_start_ts = Utc.from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap()).timestamp();
+            
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
             for code in codes {
                 let symbol = if code.len() == 4 {
                     format!("{}.T", code)
@@ -202,6 +230,7 @@ async fn main() -> anyhow::Result<()> {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             }
         } else {
+<<<<<<< HEAD
             println!(
                 "🚀 Phase 2: Yahoo履歴ページから {} 銘柄を順次同期します...",
                 codes.len()
@@ -245,6 +274,31 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+=======
+            // 🚀 デイリーモード: 100件ずつ一括取得
+            println!("🚀 Phase 2: Running lightweight bulk sync for targets...");
+            
+            // 土日の場合は最新の営業日（金曜日）の日付を割り当て、平日は今日の日付にする
+            let target_date = if today.weekday().number_from_monday() == 6 {
+                today - Duration::days(1)
+            } else if today.weekday().number_from_monday() == 7 {
+                today - Duration::days(2)
+            } else {
+                today
+            };
+
+            for chunk in codes.chunks(100) {
+                let symbols: Vec<String> = chunk.iter().map(|c| {
+                    if c.len() == 4 { format!("{}.T", c) } else { format!("{}.T", &c[..4]) }
+                }).collect();
+                
+                if let Ok(results) = fetch_yahoo_bulk(&client, &symbols).await {
+                    for (code, price, volume) in results {
+                        all_new_rows.push((target_date.to_string(), code, price, price * volume, volume));
+                    }
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
             }
 
             println!(
@@ -275,6 +329,7 @@ async fn main() -> anyhow::Result<()> {
         let new_lf = new_df.lazy().with_column(lit("").alias("news_text"));
 
         let combined_lf = if file_exists {
+<<<<<<< HEAD
             let existing_lf = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?.select([
                 col("Date"),
                 col("Code"),
@@ -283,6 +338,10 @@ async fn main() -> anyhow::Result<()> {
                 col("AdjVo"),
                 col("news_text"),
             ]);
+=======
+            let existing_lf = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?
+                .select([col("Date"), col("Code"), col("AdjC"), col("Va"), col("AdjVo"), col("news_text")]);
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
             concat([existing_lf, new_lf], UnionArgs::default())?
         } else {
             new_lf
@@ -305,6 +364,7 @@ async fn main() -> anyhow::Result<()> {
  
         let file = fs::File::create(PARQUET_PATH)?;
         ParquetWriter::new(file).finish(&mut final_df)?;
+<<<<<<< HEAD
         println!(
             "✅ Parquet updated successfully. Total rows: {}",
             final_df.height()
@@ -322,11 +382,16 @@ async fn main() -> anyhow::Result<()> {
                 expected_latest_date
             );
         }
+=======
+        println!("✅ Parquet updated successfully. Total rows: {}", final_df.height());
+    } else {
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
         println!("✨ No new rows fetched. Database is up to date.");
     }
 
     Ok(())
 }
+<<<<<<< HEAD
 
 async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()> {
     // 1. OAuth2.0 認証
@@ -411,3 +476,5 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
 
     Ok(())
 }
+=======
+>>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
