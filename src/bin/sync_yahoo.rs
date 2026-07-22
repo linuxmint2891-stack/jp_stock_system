@@ -168,11 +168,27 @@ async fn main() -> anyhow::Result<()> {
             anyhow::bail!("Yahoo同期対象の銘柄コードがParquetに存在しません");
         }
 
-        if args.maintenance {
-            println!(
-                "🧹 Phase 2: Running full maintenance sync for {} codes...",
-                codes.len()
-            );
+        // ギャップが許容範囲内（前営業日までデータが埋まっている）か判定
+        let is_up_to_date_pre_day = match today.weekday().number_from_monday() {
+            1 => (today - last_date).num_days() <= 3, // 月曜日の場合、金曜（3日前）まであればOK
+            _ => (today - last_date).num_days() <= 1, // 火〜日曜の場合、前日まであればOK
+        };
+
+        // メンテナンスモード指定がなく、かつ前営業日までのデータがすでにある場合のみバルク取得（デイリーモード）を使用する
+        let use_bulk = !args.maintenance && is_up_to_date_pre_day;
+
+        if !use_bulk {
+            if args.maintenance {
+                println!(
+                    "🧹 Phase 2: Running full maintenance sync for {} codes...",
+                    codes.len()
+                );
+            } else {
+                println!(
+                    "🔄 [Auto-Switch] Parquet最終日 ({}) と本日 ({}) の間にギャップがあるため、履歴同期モードを実行します...",
+                    last_date, today
+                );
+            }
             let yahoo_start_ts = Utc
                 .from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap())
                 .timestamp();
