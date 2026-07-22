@@ -5,12 +5,8 @@ use jp_stock_system::api::jquants::fetch_daily_bars;
 use jp_stock_system::api::yahoo::fetch_ohlc;
 use jp_stock_system::utils::get_unique_codes;
 use jp_stock_system::utils::settings::Settings;
-<<<<<<< HEAD
 use polars::prelude::*;
-=======
-use jp_stock_system::utils::get_unique_codes;
 use jp_stock_system::api::yahoo::fetch_yahoo_bulk;
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
 use std::fs;
 use std::path::Path;
 use google_drive3::{api::File, DriveHub};
@@ -66,11 +62,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. 同期範囲の決定
     let today = Local::now().naive_local().date();
-<<<<<<< HEAD
-
-=======
     
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
     // 🔥【強力なガード】デイリーモードかつ、すでに最新データ（今日か昨日）がある場合は即終了！
     if !args.maintenance && file_exists {
         let gap_days = (today - last_date).num_days();
@@ -110,16 +102,11 @@ async fn main() -> anyhow::Result<()> {
     let mut current_date = start_date;
 
     if current_date < jquants_end_date && !api_key.trim().is_empty() {
-<<<<<<< HEAD
         println!(
             "📊 Phase 1: Syncing up to {} using J-Quants Bulk API...",
             jquants_end_date
         );
 
-=======
-        println!("📊 Phase 1: Syncing up to {} using J-Quants Bulk API...", jquants_end_date);
-        
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
         while current_date < jquants_end_date {
             if current_date.weekday().number_from_monday() > 5 {
                 current_date += Duration::days(1);
@@ -156,20 +143,16 @@ async fn main() -> anyhow::Result<()> {
                         }
                     }
                 }
-                Err(e) => eprintln!("❌ Error fetching {}: {}", current_date, e),
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-            current_date += Duration::days(1);
+            Err(e) => eprintln!("❌ Error fetching {}: {}", current_date, e),
         }
+        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        current_date += Duration::days(1);
+    }
     } else if current_date < jquants_end_date {
         println!("ℹ️ J-Quants APIキーが未設定のため、J-Quantsによる履歴同期をスキップします。");
     }
 
-<<<<<<< HEAD
-    // --- STEP 2: Yahoo Zone (個別銘柄の履歴ページから取得) ---
-=======
     // --- STEP 2: Yahoo Zone (Direct or Bulk) ---
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
     let yahoo_start_date = if api_key.trim().is_empty() {
         // J-Quantsを使わない構成では、Yahoo側に全対象期間を委ねる。
         start_date
@@ -178,11 +161,7 @@ async fn main() -> anyhow::Result<()> {
     } else {
         jquants_end_date
     };
-<<<<<<< HEAD
-
-=======
     
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
     if yahoo_start_date <= today {
         let codes = get_unique_codes(PARQUET_PATH)?;
         if codes.is_empty() {
@@ -190,7 +169,6 @@ async fn main() -> anyhow::Result<()> {
         }
 
         if args.maintenance {
-<<<<<<< HEAD
             println!(
                 "🧹 Phase 2: Running full maintenance sync for {} codes...",
                 codes.len()
@@ -199,11 +177,6 @@ async fn main() -> anyhow::Result<()> {
                 .from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap())
                 .timestamp();
 
-=======
-            println!("🧹 Phase 2: Running full maintenance sync for {} codes...", codes.len());
-            let yahoo_start_ts = Utc.from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap()).timestamp();
-            
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
             for code in codes {
                 let symbol = if code.len() == 4 {
                     format!("{}.T", code)
@@ -230,51 +203,6 @@ async fn main() -> anyhow::Result<()> {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             }
         } else {
-<<<<<<< HEAD
-            println!(
-                "🚀 Phase 2: Yahoo履歴ページから {} 銘柄を順次同期します...",
-                codes.len()
-            );
-            let yahoo_start_ts = Utc
-                .from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap())
-                .timestamp();
-            let mut updated_symbols = 0usize;
-            let mut empty_symbols = 0usize;
-
-            for code in codes {
-                let symbol = if code.len() == 4 {
-                    format!("{}.T", code)
-                } else {
-                    format!("{}.T", &code[..4])
-                };
-                let ohlcs = fetch_ohlc(&client, &symbol, yahoo_start_ts).await;
-                if ohlcs.is_empty() {
-                    empty_symbols += 1;
-                    continue;
-                }
-
-                updated_symbols += 1;
-                for ohlc in ohlcs {
-                    let date = Utc
-                        .timestamp_opt(ohlc.timestamp, 0)
-                        .single()
-                        .ok_or_else(|| {
-                            anyhow::anyhow!("不正なYahooタイムスタンプ: {}", ohlc.timestamp)
-                        })?
-                        .naive_utc()
-                        .date();
-                    if date >= yahoo_start_date {
-                        all_new_rows.push((
-                            date.to_string(),
-                            code.clone(),
-                            ohlc.close,
-                            ohlc.close * ohlc.volume,
-                            ohlc.volume,
-                        ));
-                    }
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-=======
             // 🚀 デイリーモード: 100件ずつ一括取得
             println!("🚀 Phase 2: Running lightweight bulk sync for targets...");
             
@@ -298,13 +226,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(300)).await;
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
             }
-
-            println!(
-                "📊 Yahoo履歴取得結果: 更新 {} / データなし {} 銘柄",
-                updated_symbols, empty_symbols
-            );
         }
     }
 
@@ -329,7 +251,6 @@ async fn main() -> anyhow::Result<()> {
         let new_lf = new_df.lazy().with_column(lit("").alias("news_text"));
 
         let combined_lf = if file_exists {
-<<<<<<< HEAD
             let existing_lf = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?.select([
                 col("Date"),
                 col("Code"),
@@ -338,10 +259,6 @@ async fn main() -> anyhow::Result<()> {
                 col("AdjVo"),
                 col("news_text"),
             ]);
-=======
-            let existing_lf = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?
-                .select([col("Date"), col("Code"), col("AdjC"), col("Va"), col("AdjVo"), col("news_text")]);
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
             concat([existing_lf, new_lf], UnionArgs::default())?
         } else {
             new_lf
@@ -364,7 +281,6 @@ async fn main() -> anyhow::Result<()> {
  
         let file = fs::File::create(PARQUET_PATH)?;
         ParquetWriter::new(file).finish(&mut final_df)?;
-<<<<<<< HEAD
         println!(
             "✅ Parquet updated successfully. Total rows: {}",
             final_df.height()
@@ -374,7 +290,7 @@ async fn main() -> anyhow::Result<()> {
         println!("☁️ Starting Google Drive upload...");
         upload_to_gdrive(PARQUET_PATH, "processed_market_data.parquet").await?;
         println!("✅ Google Drive sync completed.");
-     } else {
+    } else {
         if last_date < expected_latest_date {
             anyhow::bail!(
                 "Yahooから新規データを取得できませんでした。Parquet最終日: {} / 必要な最終日: {}",
@@ -382,16 +298,12 @@ async fn main() -> anyhow::Result<()> {
                 expected_latest_date
             );
         }
-=======
-        println!("✅ Parquet updated successfully. Total rows: {}", final_df.height());
-    } else {
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
         println!("✨ No new rows fetched. Database is up to date.");
     }
 
     Ok(())
 }
-<<<<<<< HEAD
+
 
 async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()> {
     // 1. OAuth2.0 認証
@@ -400,7 +312,7 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
             yup_oauth2::parse_application_secret(val)?
         } else {
             let path = std::path::Path::new(&val);
-            if!path.exists() {
+            if !path.exists() {
                 anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが見つかりません: {}", val);
             }
             yup_oauth2::read_application_secret(val).await?
@@ -408,12 +320,12 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
     } else {
         let default_path = "client_secret.json";
         let path = std::path::Path::new(default_path);
-        if!path.exists() {
+        if !path.exists() {
             anyhow::bail!("client_secret.json が見つかりません。環境変数 GDRIVE_SECRET_JSON を設定してください。");
         }
         yup_oauth2::read_application_secret(default_path)
-            await
-            map_err(|e| anyhow::anyhow!("client_secret.json の読み込みに失敗しました: {}", e))?
+            .await
+            .map_err(|e| anyhow::anyhow!("client_secret.json の読み込みに失敗しました: {}", e))?
     };
 
     if let Ok(cache_json) = std::env::var("GDRIVE_TOKEN_CACHE") {
@@ -424,8 +336,8 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
         secret,
         InstalledFlowReturnMethod::HTTPRedirect,
     ).persist_tokens_to_disk("tokencache.json")
-     build()
-     await?;
+     .build()
+     .await?;
 
     let scopes = &["https://www.googleapis.com/auth/drive"];
     auth.token(scopes).await.map_err(|e| {
@@ -433,11 +345,11 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
     })?;
 
     let connector = hyper_rustls::HttpsConnectorBuilder::new()
-        with_native_roots()
-        expect("Native roots could not be loaded")
-        https_or_http()
-        enable_http1()
-        build();
+        .with_native_roots()
+        .expect("Native roots could not be loaded")
+        .https_or_http()
+        .enable_http1()
+        .build();
 
     let client = hyper::Client::builder().build(connector);
     let hub = DriveHub::new(client, auth);
@@ -448,8 +360,8 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
     // 3. 既存ファイルの検索
     let query = format!("name = '{}' and trashed = false", file_name);
     let (_, file_list) = hub.files().list().q(&query)
-        add_scope(google_drive3::api::Scope::Full)
-        doit().await?;
+        .add_scope(google_drive3::api::Scope::Full)
+        .doit().await?;
 
     let existing_file_id = file_list.files.and_then(|f| f.get(0).and_then(|f| f.id.clone()));
 
@@ -457,9 +369,9 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
         Some(id) => {
             println!("🔄 上書きアップロード中 (ID: {})...", id);
             hub.files().update(File::default(), &id)
-                add_scope(google_drive3::api::Scope::Full)
-                upload(file_data, "application/octet-stream".parse().unwrap())
-                await?;
+                .add_scope(google_drive3::api::Scope::Full)
+                .upload(file_data, "application/octet-stream".parse().unwrap())
+                .await?;
             println!("✅ 上書き成功！");
         },
         None => {
@@ -467,14 +379,13 @@ async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()
             let mut file_meta = File::default();
             file_meta.name = Some(file_name.to_string());
             hub.files().create(file_meta)
-                add_scope(google_drive3::api::Scope::Full)
-                upload(file_data, "application/octet-stream".parse().unwrap())
-                await?;
+                .add_scope(google_drive3::api::Scope::Full)
+                .upload(file_data, "application/octet-stream".parse().unwrap())
+                .await?;
             println!("✅ 新規作成成功！");
         }
     }
 
     Ok(())
 }
-=======
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
+

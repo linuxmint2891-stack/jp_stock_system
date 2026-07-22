@@ -1,18 +1,9 @@
 use anyhow::{bail, Result};
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
 use reqwest::Client;
 use std::time::Duration;
-use anyhow::{bail, Result};
-use reqwest::Client;
 use crate::model::ohlc::OHLC;
 use chrono::{NaiveDate, TimeZone, Utc};
 use regex::Regex;
-use std::time::Duration;
-=======
-use anyhow::{bail, Result};
->>>>>>> b1d4a0ecaaed44ddf6c1e69b54cabf5d2520e256
-use reqwest::Client;
-use std::time::Duration;
 
 /// Yahoo FinanceのQuote APIから複数銘柄の現在価格と出来高を取得する。
 /// 戻り値の銘柄コードは、呼び出し側のParquetと揃う4桁コードに正規化する。
