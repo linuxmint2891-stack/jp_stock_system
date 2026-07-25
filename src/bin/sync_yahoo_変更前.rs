@@ -21,10 +21,6 @@ struct Args {
     /// 3ヶ月に1回のメンテナンスモード（全銘柄の過去分をYahooから詳細同期）
     #[arg(long)]
     maintenance: bool,
-
-    /// 銘柄コードの範囲指定（例: "1000-3000"）
-    #[arg(long)]
-    range: Option<String>,
 }
 
 #[tokio::main]
@@ -68,14 +64,14 @@ async fn main() -> anyhow::Result<()> {
     let today = Local::now().naive_local().date();
     
     // 🔥【強力なガード】デイリーモードかつ、すでに最新データ（今日か昨日）がある場合は即終了！
-   // if !args.maintenance && file_exists {
-    //    let gap_days = (today - last_date).num_days();
-     //   // 土日の場合は金曜日（2日前〜3日前）で止まるため、ギャップが2日以内なら最新とみなす
-      //  if gap_days <= 1 || (today.weekday().number_from_monday() > 5 && gap_days <= 3) {
-       //     println!("✨ [Skip] データはすでに最新状態です (Parquet最終日: {} / 本日: {})。処理を終了します。", last_date, today);
-       //     return Ok(());
-       // }
-   // }
+    if !args.maintenance && file_exists {
+        let gap_days = (today - last_date).num_days();
+        // 土日の場合は金曜日（2日前〜3日前）で止まるため、ギャップが2日以内なら最新とみなす
+        if gap_days <= 1 || (today.weekday().number_from_monday() > 5 && gap_days <= 3) {
+            println!("✨ [Skip] データはすでに最新状態です (Parquet最終日: {} / 本日: {})。処理を終了します。", last_date, today);
+            return Ok(());
+        }
+    }
 
     let start_date = if args.maintenance {
         last_date.succ_opt().unwrap_or(last_date)
@@ -83,10 +79,10 @@ async fn main() -> anyhow::Result<()> {
         last_date.succ_opt().unwrap_or(today) // 既存の最後の日の翌日から同期スタート
     };
 
-//    if start_date > today && !args.maintenance {
-//        println!("✨ No new data to update (Last date is {}).", last_date);
-//        return Ok(());
-//    }
+    if start_date > today && !args.maintenance {
+        println!("✨ No new data to update (Last date is {}).", last_date);
+        return Ok(());
+    }
 
     let client = reqwest::Client::builder()
         .cookie_store(true)
@@ -167,24 +163,9 @@ async fn main() -> anyhow::Result<()> {
     };
     
     if yahoo_start_date <= today {
-        let mut codes = get_unique_codes(PARQUET_PATH)?;
+        let codes = get_unique_codes(PARQUET_PATH)?;
         if codes.is_empty() {
             anyhow::bail!("Yahoo同期対象の銘柄コードがParquetに存在しません");
-        }
-
-        // 🔥 【追加】 --range 引数がある場合、コード番号で絞り込む
-        if let Some(ref range_str) = args.range {
-            let parts: Vec<&str> = range_str.split('-').collect();
-            if parts.len() == 2 {
-                let start: u32 = parts[0].parse().unwrap_or(0);
-                let end: u32 = parts[1].parse().unwrap_or(9999);
-
-                codes.retain(|code| {
-                    let num: u32 = code.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
-                    num >= start && num <= end
-                });
-                println!("🎯 [Range Filter] {} (対象: {} 銘柄)", range_str, codes.len());
-            }
         }
 
         // ギャップが許容範囲内（前営業日までデータが埋まっている）か判定
