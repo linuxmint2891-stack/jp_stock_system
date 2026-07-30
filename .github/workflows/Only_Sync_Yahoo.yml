@@ -10,7 +10,7 @@ jobs:
       matrix:
         range: ["1000-3000", "3001-6000", "6001-9999"]
       fail-fast: false
-      
+
     steps:
       - name: 📂 Checkout repository
         uses: actions/checkout@v4
@@ -25,26 +25,44 @@ jobs:
         with:
           key: ${{ matrix.range }}
 
-      # 🔑 【追加】Google Drive 認証用トークンキャッシュの書き出し
-      - name: 🔑 Restore Google Drive Token Cache
+      # 🔑 1. サービスアカウントJSONの書き出し（テストで成功した手順）
+      - name: 🔑 Prepare Google Credentials
+        env:
+          RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
         run: |
-          echo '${{ secrets.GDRIVE_TOKEN_CACHE }}' > tokencache.json
+          if [ -z "$RAW_SECRET_DATA" ]; then
+            echo "❌ Error: M_DRIVE_SECRET is not set"
+            exit 1
+          fi
+          echo "$RAW_SECRET_DATA" > client_secret.json
+          if [[ $(head -c 1 client_secret.json) != "{" ]]; then
+            echo "❌ Error: client_secret.json looks invalid"
+            exit 1
+          fi
 
-      # 1. まず現在のベースラインを落とす
+      # 📥 2. まず現在のベースラインを落とす
       - name: 📥 Download baseline from Google Drive
         env:
-          GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
+          GDRIVE_SECRET_JSON: "client_secret.json"
+          GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
         run: |
           cargo run --release --bin download_drive -- --range ${{ matrix.range }}
 
-      # 2. 修正した超軽量ロジックで差分同期
+      # 🚀 3. 差分同期を実行
       - name: 🚀 Run sync_yahoo only
         run: |
           cargo run --release --bin sync_yahoo -- --range ${{ matrix.range }}
 
-      # 3. 🔥 同期した最新データをDriveへ書き戻す
+      # 📤 4. 同期した最新データをDriveへ書き戻す
       - name: 📤 Upload updated data to Google Drive
         env:
-          GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
+          GDRIVE_SECRET_JSON: "client_secret.json"
+          GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
         run: |
           cargo run --release --bin upload_drive -- --range ${{ matrix.range }}
+
+      # 🧹 5. クリーンアップ（一時作成したクレデンシャルを安全に削除）
+      - name: 🧹 Cleanup Credentials
+        if: always()
+        run: |
+          rm -f client_secret.json
