@@ -76,10 +76,6 @@ jobs:
         echo "📥 Downloading baseline data from Google Drive..."
         cargo run --release --bin download_drive
 
-        # ④ 最新価格の超軽量同期 (デイリーモード)
-        echo "🚀 Syncing latest market data..."
-        cargo run --release --bin sync_yahoo
-
         # ⑤ AI分析実行
         echo "🧠 Running AI Scout analysis..."
         cargo run --release --bin ai_scout
