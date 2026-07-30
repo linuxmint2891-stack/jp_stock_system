@@ -1,0 +1,52 @@
+- name: Setup Python for Drive test
+  uses: actions/setup-python@v4
+  with:
+    python-version: '3.x'
+
+- name: Prepare service account JSON
+  env:
+    RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
+  run: |
+    if [ -z "$RAW_SECRET_DATA" ]; then
+      echo "Error: M_DRIVE_SECRET is not set"
+      exit 1
+    fi
+    echo "$RAW_SECRET_DATA" > client_secret.json
+    if [[ $(head -c 1 client_secret.json) != "{" ]]; then
+      echo "Error: client_secret.json looks invalid"
+      exit 1
+    fi
+
+- name: Install Python deps for Drive
+  run: |
+    python -m pip install --upgrade pip
+    pip install --quiet google-api-python-client google-auth
+
+- name: Test Drive access (list files in folder)
+  env:
+    GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
+  run: |
+    python - <<'PY'
+import os, sys
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+folder_id = os.environ.get('GDRIVE_UPLOAD_FOLDER_ID')
+if not folder_id:
+    print("GDRIVE_UPLOAD_FOLDER_ID not set")
+    sys.exit(1)
+
+creds = service_account.Credentials.from_service_account_file('client_secret.json',
+    scopes=['https://www.googleapis.com/auth/drive'])
+service = build('drive', 'v3', credentials=creds)
+try:
+    res = service.files().list(q=f"'{folder_id}' in parents", pageSize=20, fields="files(id,name)").execute()
+    files = res.get('files', [])
+    print("Files in folder:", files)
+except Exception as e:
+    print("Drive API error:", e)
+    raise
+PY
+
+- name: Cleanup test credential
+  run: rm -f client_secret.json || true
