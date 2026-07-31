@@ -194,73 +194,88 @@ async fn main() -> anyhow::Result<()> {
         };
 
         // メンテナンスモード指定がなく、かつ前営業日までのデータがすでにある場合のみバルク取得（デイリーモード）を使用する
-        let use_bulk = !args.maintenance && is_up_to_date_pre_day;
+        let mut use_bulk = !args.maintenance && is_up_to_date_pre_day;
 
-        if !use_bulk {
-            if args.maintenance {
-                println!(
-                    "🧹 Phase 2: Running full maintenance sync for {} codes...",
-                    codes.len()
-                );
-            } else {
-                println!(
-                    "🔄 [Auto-Switch] Parquet最終日 ({}) と本日 ({}) の間にギャップがあるため、履歴同期モードを実行します...",
-                    last_date, today
-                );
-            }
-            let yahoo_start_ts = Utc
-                .from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap())
-                .timestamp();
-
-            for code in codes {
-                let symbol = if code.len() == 4 {
-                    format!("{}.T", code)
+        loop {
+            if !use_bulk {
+                if args.maintenance {
+                    println!(
+                        "🧹 Phase 2: Running full maintenance sync for {} codes...",
+                        codes.len()
+                    );
                 } else {
-                    format!("{}.T", &code[..4])
-                };
-                let ohlcs = fetch_ohlc(&client, &symbol, yahoo_start_ts).await;
-                for ohlc in ohlcs {
-                    let d = Utc
-                        .timestamp_opt(ohlc.timestamp, 0)
-                        .unwrap()
-                        .naive_utc()
-                        .date();
-                    if d >= yahoo_start_date {
-                        all_new_rows.push((
-                            d.to_string(),
-                            code.clone(),
-                            ohlc.close,
-                            ohlc.close * ohlc.volume,
-                            ohlc.volume,
-                        ));
-                    }
+                    println!(
+                        "🔄 [Auto-Switch] Parquet最終日 ({}) と本日 ({}) の間にギャップがあるため、履歴同期モードを実行します...",
+                        last_date, today
+                    );
                 }
-                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-            }
-        } else {
-            // 🚀 デイリーモード: 100件ずつ一括取得
-            println!("🚀 Phase 2: Running lightweight bulk sync for targets...");
-            
-            // 土日の場合は最新の営業日（金曜日）の日付を割り当て、平日は今日の日付にする
-            let target_date = if today.weekday().number_from_monday() == 6 {
-                today - Duration::days(1)
-            } else if today.weekday().number_from_monday() == 7 {
-                today - Duration::days(2)
-            } else {
-                today
-            };
+                let yahoo_start_ts = Utc
+                    .from_utc_datetime(&yahoo_start_date.and_hms_opt(0, 0, 0).unwrap())
+                    .timestamp();
 
-            for chunk in codes.chunks(100) {
-                let symbols: Vec<String> = chunk.iter().map(|c| {
-                    if c.len() == 4 { format!("{}.T", c) } else { format!("{}.T", &c[..4]) }
-                }).collect();
-                
-                if let Ok(results) = fetch_yahoo_bulk(&client, &symbols).await {
-                    for (code, price, volume) in results {
-                        all_new_rows.push((target_date.to_string(), code, price, price * volume, volume));
+                for code in codes.clone() {
+                    let symbol = if code.len() == 4 {
+                        format!("{}.T", code)
+                    } else {
+                        format!("{}.T", &code[..4])
+                    };
+                    let ohlcs = fetch_ohlc(&client, &symbol, yahoo_start_ts).await;
+                    for ohlc in ohlcs {
+                        let d = Utc
+                            .timestamp_opt(ohlc.timestamp, 0)
+                            .unwrap()
+                            .naive_utc()
+                            .date();
+                        if d >= yahoo_start_date {
+                            all_new_rows.push((
+                                d.to_string(),
+                                code.clone(),
+                                ohlc.close,
+                                ohlc.close * ohlc.volume,
+                                ohlc.volume,
+                            ));
+                        }
                     }
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 }
-                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                break;
+            } else {
+                // 🚀 デイリーモード: 100件ずつ一括取得
+                println!("🚀 Phase 2: Running lightweight bulk sync for targets...");
+                
+                // 土日の場合は最新の営業日（金曜日）の日付を割り当て、平日は今日の日付にする
+                let target_date = if today.weekday().number_from_monday() == 6 {
+                    today - Duration::days(1)
+                } else if today.weekday().number_from_monday() == 7 {
+                    today - Duration::days(2)
+                } else {
+                    today
+                };
+
+                for chunk in codes.chunks(100) {
+                    let symbols: Vec<String> = chunk.iter().map(|c| {
+                        if c.len() == 4 { format!("{}.T", c) } else { format!("{}.T", &c[..4]) }
+                    }).collect();
+                    
+                    match fetch_yahoo_bulk(&client, &symbols).await {
+                        Ok(results) => {
+                            for (code, price, volume) in results {
+                                all_new_rows.push((target_date.to_string(), code, price, price * volume, volume));
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("⚠️ Warning: fetch_yahoo_bulk failed: {}", e);
+                        }
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                }
+
+                if all_new_rows.is_empty() {
+                    println!("⚠️ [Auto-Fallback] バルク取得でデータを取得できなかったため、履歴同期モード（スクレイピング）にフォールバックします...");
+                    use_bulk = false;
+                } else {
+                    break;
+                }
             }
         }
     }

@@ -1,89 +1,83 @@
 use std::fs;
 use std::io::Write;
-use google_drive3::DriveHub;
-use google_drive3::hyper;
-use google_drive3::hyper_rustls;
-use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
+use reqwest::Client;
+use clap::Parser;
+
+#[derive(Parser)]
+struct Args {
+    /// 取得対象の銘柄コード範囲 (例: 1000-3000)
+    #[arg(long)]
+    range: Option<String>,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 1. OAuth2.0 認証
-    let secret = if let Ok(val) = std::env::var("GDRIVE_SECRET_JSON") {
+    let args = Args::parse();
+
+    // 1. OAuth2.0 サービスアカウント認証
+    let key = if let Ok(val) = std::env::var("GCP_SA_KEY") {
+        yup_oauth2::parse_service_account_key(val)?
+    } else if let Ok(val) = std::env::var("GDRIVE_SECRET_JSON") {
         if val.trim().starts_with('{') {
-            yup_oauth2::parse_application_secret(val)?
+            yup_oauth2::parse_service_account_key(val)?
         } else {
-            let path = std::path::Path::new(&val);
-            if !path.exists() {
-                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが見つかりません: {}", val);
-            }
-            if std::fs::metadata(path)?.len() == 0 {
-                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが空です: {}", val);
-            }
-            println!("Reading credentials from file specified in GDRIVE_SECRET_JSON: {}", val);
-            yup_oauth2::read_application_secret(val).await?
+            yup_oauth2::read_service_account_key(val).await?
         }
     } else {
         let default_path = "client_secret.json";
-        let path = std::path::Path::new(default_path);
-        if !path.exists() {
-            anyhow::bail!("デフォルトの認証ファイルが見つかりません: {}. 環境変数 GDRIVE_SECRET_JSON を設定するか、ファイルを用意してください。", default_path);
+        if !std::path::Path::new(default_path).exists() {
+            anyhow::bail!("サービスアカウントキー JSON ファイルが見つかりません。環境変数 GCP_SA_KEY または GDRIVE_SECRET_JSON を設定するか、client_secret.json を用意してください。");
         }
-        if std::fs::metadata(path)?.len() == 0 {
-            anyhow::bail!("デフォルトの認証ファイル {} が空です。GitHub Secrets の設定を確認してください。", default_path);
-        }
-        yup_oauth2::read_application_secret(default_path).await?
+        yup_oauth2::read_service_account_key(default_path).await?
     };
 
-    if let Ok(cache_json) = std::env::var("GDRIVE_TOKEN_CACHE") {
-        fs::write("tokencache.json", cache_json)?;
+    let auth = yup_oauth2::ServiceAccountAuthenticator::builder(key)
+        .persist_tokens_to_disk("tokencache.json")
+        .build()
+        .await?;
+
+    let scopes = &["https://www.googleapis.com/auth/devstorage.read_write"];
+    let token = auth.token(scopes).await?;
+    let token_str = token.token().ok_or_else(|| anyhow::anyhow!("アクセストークンの取得に失敗しました"))?;
+
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .build()?;
+
+    // 2. ダウンロード設定
+    let bucket = std::env::var("GCS_BUCKET_NAME").unwrap_or_else(|_| "jp-stock-system-bucket".to_string());
+    let file_name = match &args.range {
+        Some(r) => format!("processed_market_data_{}.parquet", r),
+        None => "processed_market_data.parquet".to_string(),
+    };
+    let local_file_name = "processed_market_data.parquet";
+
+    println!("📥 Downloading gs://{}/{} to data/{}...", bucket, file_name, local_file_name);
+
+    let url = format!(
+        "https://storage.googleapis.com/storage/v1/b/{}/o/{}?alt=media",
+        bucket,
+        file_name
+    );
+
+    let response = client
+        .get(&url)
+        .bearer_auth(token_str)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let err_body = response.text().await.unwrap_or_default();
+        anyhow::bail!("GCS download failed with status {}: {}", status, err_body);
     }
 
-    let auth = InstalledFlowAuthenticator::builder(
-        secret,
-        InstalledFlowReturnMethod::HTTPRedirect,
-    ).persist_tokens_to_disk("tokencache.json")
-     .build()
-     .await?;
-
-    let connector = hyper_rustls::HttpsConnectorBuilder::new()
-        .with_native_roots()
-        .expect("Native roots could not be loaded")
-        .https_or_http()
-        .enable_http1()
-        .build();
-
-    let client = hyper::Client::builder().build(connector);
-    let hub = DriveHub::new(client, auth);
-
-    // 2. ファイルの検索
-    let file_name = "processed_market_data.parquet";
-    let query = format!("name = '{}' and trashed = false", file_name);
-    let (_, file_list) = hub.files().list().q(&query)
-        .add_scope(google_drive3::api::Scope::Full)
-        .doit().await?;
-
-    let file_id = file_list.files.and_then(|f| f.get(0).and_then(|f| f.id.clone()));
-
-    match file_id {
-        Some(id) => {
-            println!("📥 Downloading {} (ID: {})...", file_name, id);
-            let (mut response, _) = hub.files().get(&id)
-                .add_scope(google_drive3::api::Scope::Full)
-                .param("alt", "media")
-                .doit().await?;
-
-            let mut out_file = fs::File::create(format!("data/{}", file_name))?;
-            // Note: google_drive3 5.0 uses hyper for response body
-            // We need to read the body bytes
-            let body_bytes = hyper::body::to_bytes(response.body_mut()).await?;
-            out_file.write_all(&body_bytes)?;
-            
-            println!("✅ Download successful: data/{}", file_name);
-        },
-        None => {
-            println!("⚠️ File not found on Google Drive: {}", file_name);
-        }
-    }
+    let bytes = response.bytes().await?;
+    fs::create_dir_all("data")?;
+    let mut out_file = fs::File::create(format!("data/{}", local_file_name))?;
+    out_file.write_all(&bytes)?;
+    
+    println!("✅ Download successful: data/{}", local_file_name);
 
     Ok(())
 }
