@@ -1,42 +1,10 @@
-課題と修正が必要なポイント
-1. Rust側のCLI引数（--range）の受け取り実装
-YAMLから --range 1000-3000 を渡しても、sync_yahoo.rs（および download/upload 側）のコード内で clap などを使ってこの引数をパースし、実際の取得銘柄リストをフィルタリングする処理が入っていないと、全台が全銘柄（1000〜9999）を読みに行ってしまいます。
+🚀 [Mode] デイリーモード (超軽量・最新分のみ同期します)
+🚀 Starting Hybrid Data Sync (J-Quants + Yahoo Finance)...
+📅 Last date in Parquet: 2026-07-24
+🔄 [Auto-Switch] Parquet最終日 (2026-07-24) と本日 (2026-07-31) の間にギャップがあるため、履歴同期モードを実行します...
+🔗 Merging 16564 new rows...
+🧪 Computing Alphas...
+✅ Parquet updated successfully. Total rows: 2341467
+☁️ Starting Google Drive upload...
+Error: invalid type: map, expected a sequence of JSONToken's at line 1 column 0
 
-チェック項目: sync_yahoo.rs 内で --range を受け取って get_unique_codes() 等で抽出した銘柄を「コードの数値」で絞り込むロジックになっているか確認してください。
-
-2. Google Driveの認証問題（インタラクティブ要求）
-先ほどのログに出ていた以下のエラー：
-
-Please direct your browser to [https://accounts.google.com/o/oauth2/](https://accounts.google.com/o/oauth2/)...
-
-これは、download_drive や upload_drive が「対話型のブラウザ認証（OAuth）」を求めて一時停止し、タイムアウトでキャンセルされたことを示しています。
-
-原因: M_DRIVE_SECRET（クライアントシークレット）単体では、ブラウザが開けない GitHub Actions 上で初回ログインができません。
-
-対策: リフレッシュトークン（refresh_token）も含めたトークン情報を Secrets に保存して自動読み込みさせるか、サービスアカウント（Service Account）キー JSON を使う方式に変更する必要があります。
-
-3. Google Drive上でのParquetファイルの競合
-upload_drive で 3 台のジョブが同時に同じファイル（例: processed_market_data.parquet）を Google Drive に上書きアップロードしようとすると、後から完了したジョブが前のジョブのデータを消してしまいます。
-
-対策:
-
-案A（手軽）: Drive上でも範囲ごとに別ファイルとして保存する（例: market_data_1000-3000.parquet）
-
-案B（おすすめ）: nightly の全体同期（夜間バッチ）であれば、分割せずに 1 台でじっくり（タイムアウト時間を長めにして）全件同期させて保存する
-
-理想的なワークフロー分離設計（まとめ）
-① 夜間用ワークフロー（データ更新専用）
-タイミング: 毎日 18:00 や 21:00 など市場閉場後（schedule トリガー）
-
-処理: download_drive ➔ sync_yahoo ➔ upload_drive
-
-ポイント: Google Drive 認証を非対話（トークン化/サービスアカウント）にし、朝までに確実に Parquet を更新しておく。
-
-② 朝用ワークフロー（ai_scout 専用）
-タイミング: JST 08:43（開場前）
-
-処理: download_drive ➔ ai_scout（判定 & Discord通知）
-
-ポイント: sync_yahoo は一切呼び出さない。 昨晩更新された Parquet を落としてきてスクレイピング＋AI分析だけを行うため、数分で安全に完了します。
-
-まずは Rust側で --range が正しく銘柄コードを絞り込めているか と、Google Drive の認証（トークン自動更新）が通るか の2点を確認・修正していくのが確実です！
