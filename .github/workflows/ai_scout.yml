@@ -88,7 +88,7 @@ jobs:
       if: success()
       env:
         GDRIVE_TOKEN_CACHE: ${{ secrets.GDRIVE_TOKEN_CACHE }}
-        GDRIVE_SECRET_JSON: "client_secret.json"
+        GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
         RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
       run: |
         if [ -n "$RAW_SECRET_DATA" ]; then
