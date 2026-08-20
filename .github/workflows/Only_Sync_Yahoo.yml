@@ -1,7 +1,10 @@
 name: 🔄 Sync Yahoo Data Only
 
 on:
-  workflow_dispatch:
+  schedule:
+    # 毎日 UTC 14:00 (JST 23:00) に自動実行
+    - cron: '0 14 * * *'
+  workflow_dispatch: # 手動実行もできるように残しておく
 
 jobs:
   sync_data:
@@ -18,7 +21,7 @@ jobs:
       - name: 💾 Rust Cache
         uses: swatinem/rust-cache@v2
 
-      # 🔑 1. サービスアカウントJSONの書き出し（テストで成功した手順）
+      # 🔑 1. サービスアカウントJSONの書き出し
       - name: 🔑 Prepare Google Credentials
         env:
           RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
@@ -56,7 +59,7 @@ jobs:
         run: |
           cargo run --release --bin upload_drive
 
-      # 🧹 5. クリーンアップ（一時作成したクレデンシャルを安全に削除）
+      # 🧹 5. クリーンアップ
       - name: 🧹 Cleanup Credentials
         if: always()
         run: |
