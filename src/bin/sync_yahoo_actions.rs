@@ -3,16 +3,12 @@ use clap::Parser;
 use jp_stock_system::alpha::{alpha_a, alpha_b};
 use jp_stock_system::api::jquants::fetch_daily_bars;
 use jp_stock_system::api::yahoo::fetch_ohlc;
+use jp_stock_system::api::yahoo::fetch_yahoo_bulk;
 use jp_stock_system::utils::get_unique_codes;
 use jp_stock_system::utils::settings::Settings;
 use polars::prelude::*;
-use jp_stock_system::api::yahoo::fetch_yahoo_bulk;
 use std::fs;
 use std::path::Path;
-use google_drive3::{api::File, DriveHub};
-use google_drive3::hyper;
-use google_drive3::hyper_rustls;
-use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 const PARQUET_PATH: &str = "data/processed_market_data.parquet";
 
@@ -21,6 +17,10 @@ struct Args {
     /// 3ヶ月に1回のメンテナンスモード（全銘柄の過去分をYahooから詳細同期）
     #[arg(long)]
     maintenance: bool,
+
+    /// 銘柄コードの範囲指定（例: "1000-3000"）
+    #[arg(long)]
+    range: Option<String>,
 }
 
 #[tokio::main]
@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. 同期範囲の決定
     let today = Local::now().naive_local().date();
-    
+
     // 🔥【強力なガード】デイリーモードかつ、すでに最新データ（今日か昨日）がある場合は即終了！
     if !args.maintenance && file_exists {
         let gap_days = (today - last_date).num_days();
@@ -143,11 +143,11 @@ async fn main() -> anyhow::Result<()> {
                         }
                     }
                 }
-            Err(e) => eprintln!("❌ Error fetching {}: {}", current_date, e),
+                Err(e) => eprintln!("❌ Error fetching {}: {}", current_date, e),
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+            current_date += Duration::days(1);
         }
-        tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-        current_date += Duration::days(1);
-    }
     } else if current_date < jquants_end_date {
         println!("ℹ️ J-Quants APIキーが未設定のため、J-Quantsによる履歴同期をスキップします。");
     }
@@ -161,11 +161,32 @@ async fn main() -> anyhow::Result<()> {
     } else {
         jquants_end_date
     };
-    
+
     if yahoo_start_date <= today {
-        let codes = get_unique_codes(PARQUET_PATH)?;
+        let mut codes = get_unique_codes(PARQUET_PATH)?;
         if codes.is_empty() {
             anyhow::bail!("Yahoo同期対象の銘柄コードがParquetに存在しません");
+        }
+
+        if let Some(ref range_str) = args.range {
+            let (start, end) = range_str.split_once('-').ok_or_else(|| {
+                anyhow::anyhow!("範囲指定の形式が不正です: {range_str}（例: 1000-3000）")
+            })?;
+            let start: u32 = start.parse()?;
+            let end: u32 = end.parse()?;
+            if start > end {
+                anyhow::bail!("範囲指定の開始値が終了値を超えています: {range_str}");
+            }
+
+            codes.retain(|code| {
+                code.chars()
+                    .filter(|c| c.is_ascii_digit())
+                    .collect::<String>()
+                    .get(..4)
+                    .and_then(|value| value.parse::<u32>().ok())
+                    .is_some_and(|value| value >= start && value <= end)
+            });
+            println!("🎯 [Range Filter] {range_str} (対象: {} 銘柄)", codes.len());
         }
 
         // ギャップが許容範囲内（前営業日までデータが埋まっている）か判定
@@ -221,7 +242,7 @@ async fn main() -> anyhow::Result<()> {
         } else {
             // 🚀 デイリーモード: 100件ずつ一括取得
             println!("🚀 Phase 2: Running lightweight bulk sync for targets...");
-            
+
             // 土日の場合は最新の営業日（金曜日）の日付を割り当て、平日は今日の日付にする
             let target_date = if today.weekday().number_from_monday() == 6 {
                 today - Duration::days(1)
@@ -232,13 +253,26 @@ async fn main() -> anyhow::Result<()> {
             };
 
             for chunk in codes.chunks(100) {
-                let symbols: Vec<String> = chunk.iter().map(|c| {
-                    if c.len() == 4 { format!("{}.T", c) } else { format!("{}.T", &c[..4]) }
-                }).collect();
-                
+                let symbols: Vec<String> = chunk
+                    .iter()
+                    .map(|c| {
+                        if c.len() == 4 {
+                            format!("{}.T", c)
+                        } else {
+                            format!("{}.T", &c[..4])
+                        }
+                    })
+                    .collect();
+
                 if let Ok(results) = fetch_yahoo_bulk(&client, &symbols).await {
                     for (code, price, volume) in results {
-                        all_new_rows.push((target_date.to_string(), code, price, price * volume, volume));
+                        all_new_rows.push((
+                            target_date.to_string(),
+                            code,
+                            price,
+                            price * volume,
+                            volume,
+                        ));
                     }
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(300)).await;
@@ -294,7 +328,7 @@ async fn main() -> anyhow::Result<()> {
         let alpha_df = alpha_a::compute(final_df.clone().lazy());
         let alpha_df = alpha_b::compute(alpha_df);
         let mut final_df = alpha_df.collect()?;
- 
+
         let file = fs::File::create(PARQUET_PATH)?;
         ParquetWriter::new(file).finish(&mut final_df)?;
         println!(
@@ -302,10 +336,8 @@ async fn main() -> anyhow::Result<()> {
             final_df.height()
         );
 
-        // --- STEP 4: Google Drive Upload ---
-        println!("☁️ Starting Google Drive upload...");
-        upload_to_gdrive(PARQUET_PATH, "processed_market_data.parquet").await?;
-        println!("✅ Google Drive sync completed.");
+        // Google Drive への書き戻しはワークフローの upload_drive ステップで行う。
+        // ここで認証を行わないため、ローカル用 sync_yahoo と認証方式を分離できる。
     } else {
         if last_date < expected_latest_date {
             anyhow::bail!(
@@ -319,89 +351,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-
-async fn upload_to_gdrive(file_path: &str, file_name: &str) -> anyhow::Result<()> {
-    // 1. OAuth2.0 認証
-    let secret = if let Ok(val) = std::env::var("GDRIVE_SECRET_JSON") {
-        if val.trim().starts_with('{') {
-            yup_oauth2::parse_application_secret(val)?
-        } else {
-            let path = std::path::Path::new(&val);
-            if !path.exists() {
-                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが見つかりません: {}", val);
-            }
-            yup_oauth2::read_application_secret(val).await?
-        }
-    } else {
-        let default_path = "client_secret.json";
-        let path = std::path::Path::new(default_path);
-        if !path.exists() {
-            anyhow::bail!("client_secret.json が見つかりません。環境変数 GDRIVE_SECRET_JSON を設定してください。");
-        }
-        yup_oauth2::read_application_secret(default_path)
-            .await
-            .map_err(|e| anyhow::anyhow!("client_secret.json の読み込みに失敗しました: {}", e))?
-    };
-
-    if let Ok(cache_json) = std::env::var("GDRIVE_TOKEN_CACHE") {
-        fs::write("tokencache.json", cache_json)?;
-    }
-
-    let auth = InstalledFlowAuthenticator::builder(
-        secret,
-        InstalledFlowReturnMethod::HTTPRedirect,
-    ).persist_tokens_to_disk("tokencache.json")
-     .build()
-     .await?;
-
-    let scopes = &["https://www.googleapis.com/auth/drive"];
-    auth.token(scopes).await.map_err(|e| {
-        anyhow::anyhow!("認証に失敗しました: {}. CI環境の場合は tokencache.json が必要です。", e)
-    })?;
-
-    let connector = hyper_rustls::HttpsConnectorBuilder::new()
-        .with_native_roots()
-        .expect("Native roots could not be loaded")
-        .https_or_http()
-        .enable_http1()
-        .build();
-
-    let client = hyper::Client::builder().build(connector);
-    let hub = DriveHub::new(client, auth);
-
-    // 2. アップロード設定
-    let file_data = fs::File::open(file_path)?;
-
-    // 3. 既存ファイルの検索
-    let query = format!("name = '{}' and trashed = false", file_name);
-    let (_, file_list) = hub.files().list().q(&query)
-        .add_scope(google_drive3::api::Scope::Full)
-        .doit().await?;
-
-    let existing_file_id = file_list.files.and_then(|f| f.get(0).and_then(|f| f.id.clone()));
-
-    match existing_file_id {
-        Some(id) => {
-            println!("🔄 上書きアップロード中 (ID: {})...", id);
-            hub.files().update(File::default(), &id)
-                .add_scope(google_drive3::api::Scope::Full)
-                .upload(file_data, "application/octet-stream".parse().unwrap())
-                .await?;
-            println!("✅ 上書き成功！");
-        },
-        None => {
-            println!("🆕 新規アップロード中...");
-            let mut file_meta = File::default();
-            file_meta.name = Some(file_name.to_string());
-            hub.files().create(file_meta)
-                .add_scope(google_drive3::api::Scope::Full)
-                .upload(file_data, "application/octet-stream".parse().unwrap())
-                .await?;
-            println!("✅ 新規作成成功！");
-        }
-    }
-
-    Ok(())
-}
-

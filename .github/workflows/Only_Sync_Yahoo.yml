@@ -49,9 +49,9 @@ jobs:
           cargo run --release --bin download_drive -- --range ${{ matrix.range }}
 
       # 🚀 3. 差分同期を実行
-      - name: 🚀 Run sync_yahoo only
+      - name: 🚀 Run GitHub Actions sync module
         run: |
-          cargo run --release --bin sync_yahoo -- --range ${{ matrix.range }}
+          cargo run --release --bin sync_yahoo_actions -- --range ${{ matrix.range }}
 
       # 📤 4. 同期した最新データをDriveへ書き戻す
       - name: 📤 Upload updated data to Google Drive
