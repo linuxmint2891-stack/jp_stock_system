@@ -1,114 +1,123 @@
-use clap::Parser;
-use reqwest::Client;
+use google_drive3::api::File;
+use google_drive3::hyper;
+use google_drive3::hyper_rustls;
+use google_drive3::DriveHub;
 use std::fs;
+use std::path::{Path, PathBuf};
 
-#[derive(Parser)]
-struct Args {
-    /// アップロード対象の銘柄コード範囲 (例: 1000-3000)
-    #[arg(long)]
-    range: Option<String>,
-}
+const FILE_NAME: &str = "processed_market_data.parquet";
+const LOCAL_PATH: &str = "data/processed_market_data.parquet";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenvy::dotenv().ok(); // .env があれば自動読み込み
-    let args = Args::parse();
-
-    let file_path = "data/processed_market_data.parquet";
-    if !std::path::Path::new(file_path).exists() {
-        println!("⚠️ アップロード対象ファイルが見つかりません: {}", file_path);
-        return Ok(());
+    if !Path::new(LOCAL_PATH).exists() {
+        anyhow::bail!("アップロード対象がありません: {LOCAL_PATH}");
     }
 
-    println!("🔑 Initializing Google Cloud authentication for upload...");
-
-    // 1. OAuth2.0 サービスアカウント認証
-    let key = if let Ok(val) = std::env::var("GCP_SA_KEY") {
-        yup_oauth2::parse_service_account_key(val)
-            .map_err(|e| anyhow::anyhow!("GCP_SA_KEY のパースに失敗しました: {}", e))?
-    } else if let Ok(val) = std::env::var("GDRIVE_SECRET_JSON") {
-        if val.trim().starts_with('{') {
-            yup_oauth2::parse_service_account_key(val)
-                .map_err(|e| anyhow::anyhow!("GDRIVE_SECRET_JSON のパースに失敗しました: {}", e))?
-        } else {
-            let path = std::path::Path::new(&val);
-            if !path.exists() {
-                anyhow::bail!("GDRIVE_SECRET_JSON で指定されたファイルが見つかりません: {}", val);
-            }
-            yup_oauth2::read_service_account_key(&val).await?
-        }
-    } else {
-        let default_path = "client_secret.json";
-        if !std::path::Path::new(default_path).exists() {
-            anyhow::bail!("サービスアカウントキー JSON ファイルが見つかりません。環境変数 GCP_SA_KEY または GDRIVE_SECRET_JSON を設定するか、client_secret.json を用意してください。");
-        }
-        yup_oauth2::read_service_account_key(default_path).await?
-    };
-
-    // トークンキャッシュのファイル名（必要に応じて環境変数で指定可能）
-    let cache_path = std::env::var("GDRIVE_TOKEN_CACHE").unwrap_or_else(|_| "tokencache.json".to_string());
-
-    let auth = yup_oauth2::ServiceAccountAuthenticator::builder(key)
-        .persist_tokens_to_disk(&cache_path)
+    println!("🔑 Initializing Google Drive service-account authentication...");
+    let auth = yup_oauth2::ServiceAccountAuthenticator::builder(load_service_account_key().await?)
         .build()
         .await?;
+    let hub = DriveHub::new(drive_client(), auth);
+    let folder_id = std::env::var("GDRIVE_UPLOAD_FOLDER_ID").ok();
+    let query = drive_file_query(FILE_NAME, folder_id.as_deref());
 
-    let scopes = &["https://www.googleapis.com/auth/devstorage.read_write"];
-    let token = auth.token(scopes).await
-        .map_err(|e| anyhow::anyhow!("トークンの発行に失敗しました: {}", e))?;
-
-    let token_str = token.token().ok_or_else(|| anyhow::anyhow!("アクセストークンの文字列が空です"))?;
-
-    let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()?;
-
-    // 2. アップロード設定
-    let bucket = std::env::var("GCS_BUCKET_NAME").unwrap_or_else(|_| "jp-stock-system-bucket".to_string());
-    let file_name = match &args.range {
-        Some(r) => format!("processed_market_data_{}.parquet", r),
-        None => "processed_market_data.parquet".to_string(),
-    };
-
-    let file_data = fs::read(file_path)?;
-    println!(
-        "📤 Uploading {} ({} bytes) to gs://{}/{}...",
-        file_path,
-        file_data.len(),
-        bucket,
-        file_name
-    );
-
-    // GCS オブジェクト名の URL エンコード対応
-    let encoded_file_name = urlencoding::encode(&file_name);
-    let url = format!(
-        "https://storage.googleapis.com/upload/storage/v1/b/{}/o?uploadType=media&name={}",
-        bucket,
-        encoded_file_name
-    );
-
-    let response = client
-        .post(&url)
-        .bearer_auth(token_str)
-        .header("Content-Type", "application/octet-stream")
-        .body(file_data)
-        .send()
+    let (_, file_list) = hub
+        .files()
+        .list()
+        .q(&query)
+        .add_scope(google_drive3::api::Scope::Full)
+        .doit()
         .await?;
+    let existing_id = file_list
+        .files
+        .and_then(|files| files.into_iter().next())
+        .and_then(|file| file.id);
+    let file_data = fs::File::open(LOCAL_PATH)?;
 
-    // 3. レスポンスハンドリング
-    if !response.status().is_success() {
-        let status = response.status();
-        let err_body = response.text().await.unwrap_or_default();
-        anyhow::bail!(
-            "❌ GCS upload failed [Status {}]: {}\nTarget: gs://{}/{}",
-            status,
-            err_body,
-            bucket,
-            file_name
-        );
+    match existing_id {
+        Some(id) => {
+            println!("🔄 Updating Google Drive file {}...", FILE_NAME);
+            hub.files()
+                .update(File::default(), &id)
+                .add_scope(google_drive3::api::Scope::Full)
+                .upload(file_data, "application/octet-stream".parse().unwrap())
+                .await?;
+        }
+        None => {
+            println!("🆕 Creating Google Drive file {}...", FILE_NAME);
+            let mut metadata = File::default();
+            metadata.name = Some(FILE_NAME.to_owned());
+            if let Some(folder_id) = folder_id {
+                metadata.parents = Some(vec![folder_id]);
+            }
+            hub.files()
+                .create(metadata)
+                .add_scope(google_drive3::api::Scope::Full)
+                .upload(file_data, "application/octet-stream".parse().unwrap())
+                .await?;
+        }
+    }
+    println!("✅ Google Drive upload completed.");
+    Ok(())
+}
+
+fn drive_client() -> hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>> {
+    let connector = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .expect("Native roots could not be loaded")
+        .https_or_http()
+        .enable_http1()
+        .build();
+    hyper::Client::builder().build(connector)
+}
+
+fn drive_file_query(file_name: &str, folder_id: Option<&str>) -> String {
+    match folder_id {
+        Some(folder_id) => format!(
+            "name = '{}' and '{}' in parents and trashed = false",
+            file_name, folder_id
+        ),
+        None => format!("name = '{}' and trashed = false", file_name),
+    }
+}
+
+async fn load_service_account_key() -> anyhow::Result<yup_oauth2::ServiceAccountKey> {
+    for variable in ["GCP_SA_KEY", "GDRIVE_SECRET_JSON"] {
+        if let Ok(value) = std::env::var(variable) {
+            let value = value.trim();
+            if value.is_empty() {
+                continue;
+            }
+            if value.starts_with('{') {
+                return yup_oauth2::parse_service_account_key(value.to_owned()).map_err(|e| {
+                    anyhow::anyhow!("{variable} はサービスアカウント鍵として不正です: {e}")
+                });
+            }
+            let path = Path::new(value);
+            if !path.exists() {
+                anyhow::bail!("{variable} で指定されたファイルが見つかりません: {value}");
+            }
+            return yup_oauth2::read_service_account_key(path)
+                .await
+                .map_err(|e| anyhow::anyhow!("{variable} の読み込みに失敗しました: {e}"));
+        }
     }
 
-    println!("✅ Upload successful to gs://{}/{}!", bucket, file_name);
-
-    Ok(())
+    for path in [
+        PathBuf::from("data/API_Key/credentials.json"),
+        PathBuf::from("credentials.json"),
+    ] {
+        if path.exists() {
+            return yup_oauth2::read_service_account_key(&path)
+                .await
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "サービスアカウント鍵 {} の読み込みに失敗しました: {e}",
+                        path.display()
+                    )
+                });
+        }
+    }
+    anyhow::bail!("Google Drive のサービスアカウント鍵が見つかりません")
 }
