@@ -45,11 +45,10 @@ jobs:
     - name: Run AI Scout Pipeline
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        GDRIVE_TOKEN_CACHE: ${{ secrets.GDRIVE_TOKEN_CACHE }}
-        # 🔑 【重要】バイナリ側でパスとして解釈させるためファイル名を指定
+        # サービスアカウントJSONを書き出した一時ファイルを利用する
         GDRIVE_SECRET_JSON: "client_secret.json"
-        # 🔑 シークレットの本体
         RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
+        GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: |
         # ① シークレットが空でないか確認
@@ -87,9 +86,9 @@ jobs:
     - name: Upload updated data back to Google Drive
       if: success()
       env:
-        GDRIVE_TOKEN_CACHE: ${{ secrets.GDRIVE_TOKEN_CACHE }}
-        GDRIVE_SECRET_JSON: ${{ secrets.M_DRIVE_SECRET }}
+        GDRIVE_SECRET_JSON: "client_secret.json"
         RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
+        GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
       run: |
         if [ -n "$RAW_SECRET_DATA" ]; then
           echo "$RAW_SECRET_DATA" > client_secret.json
