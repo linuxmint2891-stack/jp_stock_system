@@ -50,6 +50,8 @@ jobs:
 
       # 🚀 3. 差分同期を実行
       - name: 🚀 Run GitHub Actions sync module
+        env:
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
         run: |
           cargo run --release --bin sync_yahoo_actions -- --range ${{ matrix.range }}
 
