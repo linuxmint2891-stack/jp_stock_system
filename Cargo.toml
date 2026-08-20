@@ -38,3 +38,4 @@ clap = { version = "4.4", features = ["derive", "cargo"] }
 ratatui = "0.26"
 crossterm = { version = "0.27", features = ["events"] }
 rss = "2.0"
+urlencoding = "2.1"
