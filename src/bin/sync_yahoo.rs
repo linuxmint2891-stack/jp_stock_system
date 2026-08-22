@@ -87,18 +87,17 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // --- STEP 1: J-Quants Zone (Bulk update) ---
-    // J-Quants は日付ごとに全銘柄を返すため、直近の欠損をYahooの銘柄別
-    // スクレイピングで埋める必要がない。1営業日につき1リクエストに抑える。
-    let jquants_end_date = today;
+    // 無料プランのJ-Quantsは株価が12週間遅延するため、直近分はYahooで補う。
+    let jquants_end_date = today - Duration::days(85);
     let mut current_date = start_date;
 
-    if current_date <= jquants_end_date && !api_key.trim().is_empty() {
+    if current_date < jquants_end_date && !api_key.trim().is_empty() {
         println!(
             "📊 Phase 1: Syncing up to {} using J-Quants Bulk API...",
             jquants_end_date
         );
 
-        while current_date <= jquants_end_date {
+        while current_date < jquants_end_date {
             if current_date.weekday().number_from_monday() > 5 {
                 current_date += Duration::days(1);
                 continue;
@@ -139,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
             tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
             current_date += Duration::days(1);
         }
-    } else if current_date <= jquants_end_date {
+    } else if current_date < jquants_end_date {
         println!("ℹ️ J-Quants APIキーが未設定のため、J-Quantsによる履歴同期をスキップします。");
     }
 
