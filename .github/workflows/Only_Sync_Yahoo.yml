@@ -2,65 +2,98 @@ name: 🔄 Sync Yahoo Data Only
 
 on:
   schedule:
-    # 毎日 UTC 14:00 (JST 23:00) に自動実行
-    - cron: '0 14 * * *'
-  workflow_dispatch: # 手動実行もできるように残しておく
+    - cron: '0 14 * * *' # 毎日 JST 23:00
+  workflow_dispatch:
 
 jobs:
-  sync_data:
+  sync_shard:
+    name: Sync ${{ matrix.range }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        range: ["1000-3000", "3001-6000", "6001-9999"]
     steps:
-      - name: 📂 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          key: yahoo-shard-${{ matrix.range }}
 
-      - name: 💾 Rust Cache
-        uses: swatinem/rust-cache@v2
-
-      # 🔑 1. サービスアカウントJSONの書き出し
-      - name: 🔑 Prepare Google Credentials
+      - name: Prepare Google credentials
         env:
           RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
         run: |
-          if [ -z "$RAW_SECRET_DATA" ]; then
-            echo "❌ Error: M_DRIVE_SECRET is not set"
-            exit 1
-          fi
-          echo "$RAW_SECRET_DATA" > client_secret.json
-          if [[ $(head -c 1 client_secret.json) != "{" ]]; then
-            echo "❌ Error: client_secret.json looks invalid"
-            exit 1
-          fi
+          test -n "$RAW_SECRET_DATA"
+          printf '%s' "$RAW_SECRET_DATA" > client_secret.json
 
-      # 📥 2. まず現在のベースラインを落とす
-      - name: 📥 Download baseline from Google Drive
+      - name: Download or initialize shard
         env:
-          GDRIVE_SECRET_JSON: "client_secret.json"
+          GDRIVE_SECRET_JSON: client_secret.json
           GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
         run: |
-          cargo run --release --bin download_drive
+          if ! cargo run --release --bin download_drive -- --range ${{ matrix.range }}; then
+            echo "Shard not found; creating it from the current merged Parquet."
+            cargo run --release --bin download_drive
+            cargo run --release --bin create_parquet_shard -- --range ${{ matrix.range }}
+          fi
 
-      # 🚀 3. 差分同期を実行
-      - name: 🚀 Run GitHub Actions sync module
+      - name: Sync shard data
         env:
           JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
-        run: |
-          cargo run --release --bin sync_yahoo_actions
+        run: cargo run --release --bin sync_yahoo_actions -- --range ${{ matrix.range }}
 
-      # 📤 4. 同期した最新データをDriveへ書き戻す
-      - name: 📤 Upload updated data to Google Drive
+      - name: Upload shard
         env:
-          GDRIVE_SECRET_JSON: "client_secret.json"
+          GDRIVE_SECRET_JSON: client_secret.json
+          GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
+        run: cargo run --release --bin upload_drive -- --range ${{ matrix.range }}
+
+      - name: Cleanup credentials
+        if: always()
+        run: rm -f client_secret.json
+
+  merge_shards:
+    name: Merge updated shards
+    needs: sync_shard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          key: yahoo-shard-merge
+
+      - name: Prepare Google credentials
+        env:
+          RAW_SECRET_DATA: ${{ secrets.M_DRIVE_SECRET }}
+        run: |
+          test -n "$RAW_SECRET_DATA"
+          printf '%s' "$RAW_SECRET_DATA" > client_secret.json
+
+      - name: Download all shards
+        env:
+          GDRIVE_SECRET_JSON: client_secret.json
           GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
         run: |
-          cargo run --release --bin upload_drive
+          for range in 1000-3000 3001-6000 6001-9999; do
+            cargo run --release --bin download_drive -- --range "$range"
+          done
 
-      # 🧹 5. クリーンアップ
-      - name: 🧹 Cleanup Credentials
+      - name: Merge shards
+        run: cargo run --release --bin merge_parquet_shards
+
+      - name: Publish merged Parquet
+        env:
+          GDRIVE_SECRET_JSON: client_secret.json
+          GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
+        run: cargo run --release --bin upload_drive
+
+      - name: Cleanup credentials
         if: always()
-        run: |
-          rm -f client_secret.json
+        run: rm -f client_secret.json

@@ -5,19 +5,25 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-const FILE_NAME: &str = "processed_market_data.parquet";
-const LOCAL_PATH: &str = "data/processed_market_data.parquet";
+#[derive(Parser)]
+struct Args {
+    /// 銘柄範囲ごとのParquetを指定（例: 1000-3000）
+    #[arg(long)]
+    range: Option<String>,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     println!("🔑 Initializing Google Drive service-account authentication...");
+    let args = Args::parse();
+    let (file_name, local_path) = parquet_names(args.range.as_deref());
     let auth = yup_oauth2::ServiceAccountAuthenticator::builder(load_service_account_key().await?)
         .build()
         .await?;
     let hub = DriveHub::new(drive_client(), auth);
 
     let folder_id = std::env::var("GDRIVE_UPLOAD_FOLDER_ID").ok();
-    let query = drive_file_query(FILE_NAME, folder_id.as_deref());
+    let query = drive_file_query(&file_name, folder_id.as_deref());
     let (_, file_list) = hub
         .files()
         .list()
@@ -33,11 +39,11 @@ async fn main() -> anyhow::Result<()> {
     let file_id = file_id.ok_or_else(|| {
         anyhow::anyhow!(
             "Google Drive に {} が見つかりません。GDRIVE_UPLOAD_FOLDER_ID とフォルダ共有設定を確認してください。",
-            FILE_NAME
+            file_name
         )
     })?;
 
-    println!("📥 Downloading Google Drive file {}...", FILE_NAME);
+    println!("📥 Downloading Google Drive file {}...", file_name);
     let (mut response, _) = hub
         .files()
         .get(&file_id)
@@ -48,10 +54,18 @@ async fn main() -> anyhow::Result<()> {
     let bytes = hyper::body::to_bytes(response.body_mut()).await?;
 
     fs::create_dir_all("data")?;
-    let mut output = fs::File::create(LOCAL_PATH)?;
+    let mut output = fs::File::create(&local_path)?;
     output.write_all(&bytes)?;
-    println!("✅ Downloaded {} bytes to {}", bytes.len(), LOCAL_PATH);
+    println!("✅ Downloaded {} bytes to {}", bytes.len(), local_path);
     Ok(())
+}
+
+fn parquet_names(range: Option<&str>) -> (String, String) {
+    let file_name = match range {
+        Some(range) => format!("processed_market_data_{range}.parquet"),
+        None => "processed_market_data.parquet".to_owned(),
+    };
+    (file_name.clone(), format!("data/{file_name}"))
 }
 
 fn drive_client() -> hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>> {
@@ -113,3 +127,4 @@ async fn load_service_account_key() -> anyhow::Result<yup_oauth2::ServiceAccount
     }
     anyhow::bail!("Google Drive のサービスアカウント鍵が見つかりません")
 }
+use clap::Parser;

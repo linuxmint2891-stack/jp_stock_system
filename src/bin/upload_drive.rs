@@ -5,13 +5,19 @@ use google_drive3::DriveHub;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const FILE_NAME: &str = "processed_market_data.parquet";
-const LOCAL_PATH: &str = "data/processed_market_data.parquet";
+#[derive(Parser)]
+struct Args {
+    /// 銘柄範囲ごとのParquetを指定（例: 1000-3000）
+    #[arg(long)]
+    range: Option<String>,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    if !Path::new(LOCAL_PATH).exists() {
-        anyhow::bail!("アップロード対象がありません: {LOCAL_PATH}");
+    let args = Args::parse();
+    let (file_name, local_path) = parquet_names(args.range.as_deref());
+    if !Path::new(&local_path).exists() {
+        anyhow::bail!("アップロード対象がありません: {local_path}");
     }
 
     println!("🔑 Initializing Google Drive service-account authentication...");
@@ -20,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     let hub = DriveHub::new(drive_client(), auth);
     let folder_id = std::env::var("GDRIVE_UPLOAD_FOLDER_ID").ok();
-    let query = drive_file_query(FILE_NAME, folder_id.as_deref());
+    let query = drive_file_query(&file_name, folder_id.as_deref());
 
     let (_, file_list) = hub
         .files()
@@ -33,11 +39,11 @@ async fn main() -> anyhow::Result<()> {
         .files
         .and_then(|files| files.into_iter().next())
         .and_then(|file| file.id);
-    let file_data = fs::File::open(LOCAL_PATH)?;
+    let file_data = fs::File::open(&local_path)?;
 
     match existing_id {
         Some(id) => {
-            println!("🔄 Updating Google Drive file {}...", FILE_NAME);
+            println!("🔄 Updating Google Drive file {}...", file_name);
             hub.files()
                 .update(File::default(), &id)
                 .add_scope(google_drive3::api::Scope::Full)
@@ -45,9 +51,9 @@ async fn main() -> anyhow::Result<()> {
                 .await?;
         }
         None => {
-            println!("🆕 Creating Google Drive file {}...", FILE_NAME);
+            println!("🆕 Creating Google Drive file {}...", file_name);
             let mut metadata = File::default();
-            metadata.name = Some(FILE_NAME.to_owned());
+            metadata.name = Some(file_name);
             if let Some(folder_id) = folder_id {
                 metadata.parents = Some(vec![folder_id]);
             }
@@ -60,6 +66,14 @@ async fn main() -> anyhow::Result<()> {
     }
     println!("✅ Google Drive upload completed.");
     Ok(())
+}
+
+fn parquet_names(range: Option<&str>) -> (String, String) {
+    let file_name = match range {
+        Some(range) => format!("processed_market_data_{range}.parquet"),
+        None => "processed_market_data.parquet".to_owned(),
+    };
+    (file_name.clone(), format!("data/{file_name}"))
 }
 
 fn drive_client() -> hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>> {
@@ -121,3 +135,4 @@ async fn load_service_account_key() -> anyhow::Result<yup_oauth2::ServiceAccount
     }
     anyhow::bail!("Google Drive のサービスアカウント鍵が見つかりません")
 }
+use clap::Parser;

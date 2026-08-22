@@ -10,8 +10,6 @@ use polars::prelude::*;
 use std::fs;
 use std::path::Path;
 
-const PARQUET_PATH: &str = "data/processed_market_data.parquet";
-
 #[derive(Parser)]
 struct Args {
     /// 3ヶ月に1回のメンテナンスモード（全銘柄の過去分をYahooから詳細同期）
@@ -27,6 +25,7 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     let args = Args::parse();
+    let parquet_path = parquet_path(args.range.as_deref());
     let settings = Settings::new()?;
     let api_key = &settings.jquants.api_key;
 
@@ -40,10 +39,10 @@ async fn main() -> anyhow::Result<()> {
 
     // 1. 既存の Parquet から最新日付を取得
     let mut last_date = NaiveDate::from_ymd_opt(2024, 3, 19).unwrap();
-    let file_exists = Path::new(PARQUET_PATH).exists();
+    let file_exists = Path::new(&parquet_path).exists();
 
     if file_exists {
-        if let Ok(df_last) = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?
+        if let Ok(df_last) = LazyFrame::scan_parquet(&parquet_path, Default::default())?
             .select([col("Date").max()])
             .collect()
         {
@@ -164,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     if yahoo_start_date <= today {
-        let mut codes = get_unique_codes(PARQUET_PATH)?;
+        let mut codes = get_unique_codes(&parquet_path)?;
         if codes.is_empty() {
             anyhow::bail!("Yahoo同期対象の銘柄コードがParquetに存在しません");
         }
@@ -302,7 +301,7 @@ async fn main() -> anyhow::Result<()> {
         let new_lf = new_df.lazy().with_column(lit("").alias("news_text"));
 
         let combined_lf = if file_exists {
-            let existing_lf = LazyFrame::scan_parquet(PARQUET_PATH, Default::default())?.select([
+            let existing_lf = LazyFrame::scan_parquet(&parquet_path, Default::default())?.select([
                 col("Date"),
                 col("Code"),
                 col("AdjC"),
@@ -330,7 +329,7 @@ async fn main() -> anyhow::Result<()> {
         let alpha_df = alpha_b::compute(alpha_df);
         let mut final_df = alpha_df.collect()?;
 
-        let file = fs::File::create(PARQUET_PATH)?;
+        let file = fs::File::create(&parquet_path)?;
         ParquetWriter::new(file).finish(&mut final_df)?;
         println!(
             "✅ Parquet updated successfully. Total rows: {}",
@@ -351,4 +350,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn parquet_path(range: Option<&str>) -> String {
+    match range {
+        Some(range) => format!("data/processed_market_data_{range}.parquet"),
+        None => "data/processed_market_data.parquet".to_owned(),
+    }
 }
