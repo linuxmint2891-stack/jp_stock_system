@@ -75,6 +75,10 @@ jobs:
         echo "📥 Downloading baseline data from Google Drive..."
         cargo run --release --bin download_drive
 
+        # ④ 前回の保有・注文・取引履歴を復元（初回はDBなしで開始）
+        echo "📂 Restoring portfolio state..."
+        cargo run --release --bin download_drive -- --file-name stocks.db --local-path stocks.db --allow-missing
+
         # ⑤ AI分析実行
         echo "🧠 Running AI Scout analysis..."
         cargo run --release --bin ai_scout
@@ -95,6 +99,9 @@ jobs:
 
           # マイドライブへ最新のParquetファイルをアップロード（上書き）
           cargo run --release --bin upload_drive
+
+          # 保有・注文・取引履歴を次回のAI Scout用に永続化
+          cargo run --release --bin upload_drive -- --file-name stocks.db --local-path stocks.db
 
           rm -f client_secret.json
         else

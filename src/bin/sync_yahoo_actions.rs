@@ -1,4 +1,4 @@
-use chrono::{Datelike, Duration, Local, NaiveDate, TimeZone, Utc};
+use chrono::{Datelike, Duration, FixedOffset, NaiveDate, TimeZone, Utc};
 use clap::Parser;
 use jp_stock_system::alpha::{alpha_a, alpha_b};
 use jp_stock_system::api::jquants::fetch_daily_bars;
@@ -7,6 +7,7 @@ use jp_stock_system::api::yahoo::fetch_yahoo_bulk;
 use jp_stock_system::utils::get_unique_codes;
 use jp_stock_system::utils::settings::Settings;
 use polars::prelude::*;
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -60,7 +61,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // 2. 同期範囲の決定
-    let today = Local::now().naive_local().date();
+    // GitHub Actions runner is UTC. 日本市場の営業日判定は常にJSTで行う。
+    let today = jst_today();
 
     // 🔥【強力なガード】デイリーモードかつ、すでに最新データ（今日か昨日）がある場合は即終了！
     if !args.maintenance && file_exists {
@@ -252,6 +254,13 @@ async fn main() -> anyhow::Result<()> {
                 today
             };
 
+            let expected_codes: HashSet<String> = codes
+                .iter()
+                .map(|code| code.chars().take(4).collect())
+                .collect();
+            let mut received_codes = HashSet::new();
+            let mut bulk_failures = Vec::new();
+
             for chunk in codes.chunks(100) {
                 let symbols: Vec<String> = chunk
                     .iter()
@@ -264,18 +273,45 @@ async fn main() -> anyhow::Result<()> {
                     })
                     .collect();
 
-                if let Ok(results) = fetch_yahoo_bulk(&client, &symbols).await {
-                    for (code, price, volume) in results {
-                        all_new_rows.push((
-                            target_date.to_string(),
-                            code,
-                            price,
-                            price * volume,
-                            volume,
+                match fetch_yahoo_bulk(&client, &symbols).await {
+                    Ok(results) if results.is_empty() => {
+                        bulk_failures.push(format!(
+                            "{}〜{}: 応答が空です",
+                            symbols.first().unwrap(),
+                            symbols.last().unwrap()
+                        ));
+                    }
+                    Ok(results) => {
+                        for (code, price, volume) in results {
+                            received_codes.insert(code.clone());
+                            all_new_rows.push((
+                                target_date.to_string(),
+                                code,
+                                price,
+                                price * volume,
+                                volume,
+                            ));
+                        }
+                    }
+                    Err(error) => {
+                        bulk_failures.push(format!(
+                            "{}〜{}: {error}",
+                            symbols.first().unwrap(),
+                            symbols.last().unwrap()
                         ));
                     }
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            }
+
+            let missing_count = expected_codes.difference(&received_codes).count();
+            if !bulk_failures.is_empty() || missing_count > 0 {
+                anyhow::bail!(
+                    "Yahoo一括取得が不完全です（失敗チャンク: {} / 未取得銘柄: {}）。Parquetは更新しません。詳細: {}",
+                    bulk_failures.len(),
+                    missing_count,
+                    bulk_failures.into_iter().take(3).collect::<Vec<_>>().join(" | ")
+                );
             }
         }
     }
@@ -357,4 +393,9 @@ fn parquet_path(range: Option<&str>) -> String {
         Some(range) => format!("data/processed_market_data_{range}.parquet"),
         None => "data/processed_market_data.parquet".to_owned(),
     }
+}
+
+fn jst_today() -> NaiveDate {
+    let jst = FixedOffset::east_opt(9 * 60 * 60).expect("JST offset must be valid");
+    Utc::now().with_timezone(&jst).date_naive()
 }

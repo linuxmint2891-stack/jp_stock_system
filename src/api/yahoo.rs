@@ -1,46 +1,99 @@
+use crate::model::ohlc::OHLC;
 use anyhow::{bail, Result};
+use chrono::{NaiveDate, TimeZone, Utc};
+use futures::stream::{self, StreamExt};
+use regex::Regex;
 use reqwest::Client;
 use std::time::Duration;
-use crate::model::ohlc::OHLC;
-use chrono::{NaiveDate, TimeZone, Utc};
-use regex::Regex;
 
 /// Yahoo FinanceのQuote APIから複数銘柄の現在価格と出来高を取得する。
 /// 戻り値の銘柄コードは、呼び出し側のParquetと揃う4桁コードに正規化する。
-pub async fn fetch_yahoo_bulk(client: &Client, symbols: &[String]) -> Result<Vec<(String, f64, f64)>> {
+pub async fn fetch_yahoo_bulk(
+    client: &Client,
+    symbols: &[String],
+) -> Result<Vec<(String, f64, f64)>> {
     if symbols.is_empty() {
         return Ok(Vec::new());
     }
 
-    let url = "https://query1.finance.yahoo.com/v7/finance/quote";
-    let response = client
-        .get(url)
-        .query(&[("symbols", symbols.join(","))])
-        .header("User-Agent", "Mozilla/5.0")
-        .send()
-        .await?;
+    // v7/finance/quote は2026年時点で認証必須になっている。
+    // 認証不要の Chart API を銘柄ごとに呼び、並列数を制限して負荷を抑える。
+    const MAX_CONCURRENT_REQUESTS: usize = 8;
+    let outcomes = stream::iter(symbols.iter().cloned())
+        .map(|symbol| async move { fetch_yahoo_chart_quote(client, &symbol).await })
+        .buffer_unordered(MAX_CONCURRENT_REQUESTS)
+        .collect::<Vec<_>>()
+        .await;
 
-    if !response.status().is_success() {
-        bail!("Yahoo bulk quote request failed with status {}", response.status());
+    outcomes.into_iter().collect()
+}
+
+async fn fetch_yahoo_chart_quote(client: &Client, symbol: &str) -> Result<(String, f64, f64)> {
+    let url = format!("https://query1.finance.yahoo.com/v8/finance/chart/{symbol}");
+    const MAX_RETRIES: u32 = 3;
+    for attempt in 1..=MAX_RETRIES {
+        match client
+            .get(&url)
+            .query(&[("range", "5d"), ("interval", "1d")])
+            .header("User-Agent", "Mozilla/5.0")
+            .send()
+            .await
+        {
+            Ok(response) if response.status().is_success() => {
+                let body: serde_json::Value = response.json().await?;
+                let chart = body["chart"]["result"]
+                    .as_array()
+                    .and_then(|results| results.first())
+                    .ok_or_else(|| anyhow::anyhow!("Yahoo chart response has no result: {body}"))?;
+                let meta = &chart["meta"];
+                let returned_symbol = meta["symbol"]
+                    .as_str()
+                    .ok_or_else(|| anyhow::anyhow!("Yahoo chart response has no symbol: {body}"))?;
+                let price = meta["regularMarketPrice"].as_f64().ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Yahoo chart response has no market price for {returned_symbol}"
+                    )
+                })?;
+                let volume = meta["regularMarketVolume"].as_f64().ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Yahoo chart response has no market volume for {returned_symbol}"
+                    )
+                })?;
+                let code = returned_symbol
+                    .strip_suffix(".T")
+                    .unwrap_or(returned_symbol)
+                    .to_string();
+                return Ok((code, price, volume));
+            }
+            Ok(response) => {
+                let status = response.status();
+                let detail = response.text().await.unwrap_or_default();
+                if attempt == MAX_RETRIES
+                    || !(status.is_server_error()
+                        || status == reqwest::StatusCode::TOO_MANY_REQUESTS)
+                {
+                    bail!(
+                        "Yahoo chart request failed for {symbol} with status {status}: {}",
+                        detail.chars().take(300).collect::<String>()
+                    );
+                }
+                eprintln!(
+                    "⚠️ Yahoo chart request failed ({symbol}: {status}, retry {attempt}/{MAX_RETRIES})"
+                );
+            }
+            Err(error) => {
+                if attempt == MAX_RETRIES {
+                    return Err(error.into());
+                }
+                eprintln!(
+                    "⚠️ Yahoo chart connection failed ({symbol}: {error}, retry {attempt}/{MAX_RETRIES})"
+                );
+            }
+        }
+        tokio::time::sleep(Duration::from_secs(attempt as u64)).await;
     }
 
-    let body: serde_json::Value = response.json().await?;
-    let results = body["quoteResponse"]["result"]
-        .as_array()
-        .ok_or_else(|| anyhow::anyhow!("Yahoo bulk quote response has no result array"))?;
-
-    let quotes = results
-        .iter()
-        .filter_map(|quote| {
-            let symbol = quote["symbol"].as_str()?;
-            let price = quote["regularMarketPrice"].as_f64()?;
-            let volume = quote["regularMarketVolume"].as_f64()?;
-            let code = symbol.strip_suffix(".T").unwrap_or(symbol).to_string();
-            Some((code, price, volume))
-        })
-        .collect();
-
-    Ok(quotes)
+    unreachable!("retry loop always returns")
 }
 
 pub async fn fetch_ohlc(client: &Client, symbol: &str, start_timestamp: i64) -> Vec<OHLC> {

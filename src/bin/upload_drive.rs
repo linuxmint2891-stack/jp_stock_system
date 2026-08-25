@@ -10,12 +10,20 @@ struct Args {
     /// 銘柄範囲ごとのParquetを指定（例: 1000-3000）
     #[arg(long)]
     range: Option<String>,
+
+    /// Drive上の任意のファイル名（rangeとは併用不可）
+    #[arg(long, conflicts_with = "range")]
+    file_name: Option<String>,
+
+    /// アップロード元のローカルパス（--file-name指定時のみ有効）
+    #[arg(long, requires = "file_name")]
+    local_path: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let (file_name, local_path) = parquet_names(args.range.as_deref());
+    let (file_name, local_path) = file_spec(&args)?;
     if !Path::new(&local_path).exists() {
         anyhow::bail!("アップロード対象がありません: {local_path}");
     }
@@ -68,12 +76,19 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn parquet_names(range: Option<&str>) -> (String, String) {
-    let file_name = match range {
+fn file_spec(args: &Args) -> anyhow::Result<(String, String)> {
+    if let Some(file_name) = &args.file_name {
+        let local_path = args
+            .local_path
+            .clone()
+            .unwrap_or_else(|| format!("data/{file_name}"));
+        return Ok((file_name.clone(), local_path));
+    }
+    let file_name = match &args.range {
         Some(range) => format!("processed_market_data_{range}.parquet"),
         None => "processed_market_data.parquet".to_owned(),
     };
-    (file_name.clone(), format!("data/{file_name}"))
+    Ok((file_name.clone(), format!("data/{file_name}")))
 }
 
 fn drive_client() -> hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>> {
