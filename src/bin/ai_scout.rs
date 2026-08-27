@@ -284,16 +284,30 @@ async fn main() -> Result<()> {
                     eprintln!("Discord通知中にエラーが発生: {:?}", e);
                 }
 
-                // ペーパートレード台帳への記録 (スコア 0.70 以上)
+                // ペーパートレード台帳への記録（小口・1株単位、設定済みの予算上限内）
                 if result.decision == "GO" && result.sentiment_score >= 0.70 {
-                    if let Err(e) = jp_stock_system::paper_trade::record_virtual_buy(
+                    match jp_stock_system::paper_trade::calculate_fractional_buy_qty(
                         &conn,
-                        code,
-                        name,
+                        trading.paper_total_budget,
+                        trading.paper_position_budget,
                         price,
-                        100 // 100株
                     ) {
-                        eprintln!("❌ ペーパートレード記録失敗: {}", e);
+                        Ok(Some((qty, estimated_cost))) => {
+                            println!(
+                                "💡 小口購入提案: {}株 / 推定 {}円（1銘柄上限 {}円）",
+                                qty, estimated_cost, trading.paper_position_budget
+                            );
+                            if let Err(e) = jp_stock_system::paper_trade::record_virtual_buy(
+                                &conn, code, name, price, qty,
+                            ) {
+                                eprintln!("❌ ペーパートレード記録失敗: {}", e);
+                            }
+                        }
+                        Ok(None) => println!(
+                            "ℹ️ 予算不足のため {} ({}) の小口購入は記録しません。",
+                            name, code
+                        ),
+                        Err(e) => eprintln!("❌ 小口購入数量の計算に失敗: {}", e),
                     }
                 }
             }

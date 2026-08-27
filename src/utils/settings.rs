@@ -19,6 +19,8 @@ pub struct TradingSettings {
     pub broker: String,
     pub execution_mode: String,
     pub account_type: String,
+    pub paper_total_budget: u64,
+    pub paper_position_budget: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -42,6 +44,8 @@ impl Settings {
             .set_default("trading.broker", "moomoo証券")?
             .set_default("trading.execution_mode", "manual_fractional")?
             .set_default("trading.account_type", "specified_only")?
+            .set_default("trading.paper_total_budget", 100_000_u64)?
+            .set_default("trading.paper_position_budget", 10_000_u64)?
             // Load from file
             .add_source(File::with_name("settings").required(false))
             // 既存環境との互換のため大文字名も受け付ける。

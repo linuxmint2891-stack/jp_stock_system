@@ -78,6 +78,65 @@ pub fn record_virtual_buy(
     Ok(())
 }
 
+/// 種銭と予約・保有済み金額から、次の小口購入に使える株数を計算する。
+/// 単元未満株を前提に、1株単位で切り捨てる。
+pub fn calculate_fractional_buy_qty(
+    conn: &Connection,
+    total_budget: u64,
+    position_budget: u64,
+    price: f64,
+) -> rusqlite::Result<Option<(i64, f64)>> {
+    if !price.is_finite() || price <= 0.0 {
+        return Ok(None);
+    }
+
+    let reserved: f64 = conn.query_row(
+        "
+        SELECT COALESCE(SUM(entry_price * qty), 0.0)
+        FROM active_positions
+        WHERE status IN ('PENDING_BUY', 'HOLDING', 'PENDING_SELL')
+        ",
+        [],
+        |row| row.get(0),
+    )?;
+    let remaining_budget = (total_budget as f64 - reserved).max(0.0);
+    let allocated_budget = remaining_budget.min(position_budget as f64);
+    let qty = (allocated_budget / price).floor() as i64;
+
+    if qty < 1 {
+        return Ok(None);
+    }
+    Ok(Some((qty, qty as f64 * price)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fractional_qty_respects_position_and_total_budget() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_db_extended(&conn).unwrap();
+
+        assert_eq!(
+            calculate_fractional_buy_qty(&conn, 4_000, 3_000, 1_000.0).unwrap(),
+            Some((3, 3_000.0))
+        );
+        record_virtual_buy(&conn, "0001", "テスト銘柄", 1_000.0, 3).unwrap();
+
+        assert_eq!(
+            calculate_fractional_buy_qty(&conn, 4_000, 3_000, 1_000.0).unwrap(),
+            Some((1, 1_000.0))
+        );
+        record_virtual_buy(&conn, "0002", "テスト銘柄2", 1_000.0, 1).unwrap();
+
+        assert_eq!(
+            calculate_fractional_buy_qty(&conn, 4_000, 3_000, 1_000.0).unwrap(),
+            None
+        );
+    }
+}
+
 /// 1. 前日の予約（PENDING）を本日の始値(Open)ベースで約定させる関数
 pub async fn execute_pending_orders(conn: &Connection) -> rusqlite::Result<()> {
     let today_str = Local::now().format("%Y-%m-%d").to_string();

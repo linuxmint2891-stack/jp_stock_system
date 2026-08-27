@@ -19,6 +19,9 @@ storage = "Google Drive"
 broker = "moomoo証券"
 execution_mode = "manual_fractional"
 account_type = "specified_only"
+# ペーパートレードと手動注文提案で共有する資金管理ルール（円）
+paper_total_budget = 100000
+paper_position_budget = 10000
 
 [ai_communication]
 language = "Japanese"
