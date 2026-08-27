@@ -4,16 +4,18 @@ use jp_stock_system::api::approver::TradeApprover;
 use jp_stock_system::utils::settings::Settings;
 use std::fs::OpenOptions;
 use std::io::Write;
-use chrono::{Local, Timelike, Utc, FixedOffset};
+use chrono::{Local, Utc, FixedOffset};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
     let trading = Settings::new()?.trading;
 
-    // 🚨 朝 8:55 を過ぎてジョブが動いた場合は、危険なので強制停止する（FORCE_RUN環境変数が設定されている場合はスキップ）
+    // 手動注文運用中は、時刻を理由にAI Scoutを停止しない。
+    // 実発注を自動化する際は、以下のガードレールを再有効化すること。
     let jst_offset = FixedOffset::east_opt(9 * 3600).unwrap();
     let now = Utc::now().with_timezone(&jst_offset);
+    /*
     let force_run = std::env::var("FORCE_RUN").is_ok();
     if !force_run && (now.hour() >= 9 || (now.hour() == 8 && now.minute() >= 55)) {
         println!("🛑 [🚨緊急停止ガードレール発動] 現在時刻は JST {} です。", now.format("%H:%M:%S"));
@@ -21,8 +23,9 @@ async fn main() -> Result<()> {
         println!("（テスト等で強制実行したい場合は、環境変数 FORCE_RUN=true を指定してください）");
         std::process::exit(0);
     }
+    */
     println!(
-        "🟢 時間内（JST {}）の起動を確認。{}向けの手動注文提案を生成します...",
+        "🟢 JST {} に起動。{}向けの手動注文提案を生成します...",
         now.format("%H:%M:%S"),
         trading.broker
     );
