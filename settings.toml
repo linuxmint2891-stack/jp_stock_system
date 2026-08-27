@@ -13,6 +13,13 @@ incremental_update = true
 source = ["JPX Quant", "Yahoo Finance"]
 storage = "Google Drive"
 
+[trading]
+# 日本株の単元未満株は moomoo 証券で手動発注する。
+# 現時点で本システムは証券会社への実発注を行わない。
+broker = "moomoo証券"
+execution_mode = "manual_fractional"
+account_type = "specified_only"
+
 [ai_communication]
 language = "Japanese"
 instruction = "全ての出力、コメント、報告、およびAI同士の対話は日本語で行うこと。"

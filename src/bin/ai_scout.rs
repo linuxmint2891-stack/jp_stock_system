@@ -1,6 +1,7 @@
 use polars::prelude::*;
 use anyhow::Result;
 use jp_stock_system::api::approver::TradeApprover;
+use jp_stock_system::utils::settings::Settings;
 use std::fs::OpenOptions;
 use std::io::Write;
 use chrono::{Local, Timelike, Utc, FixedOffset};
@@ -8,6 +9,7 @@ use chrono::{Local, Timelike, Utc, FixedOffset};
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
+    let trading = Settings::new()?.trading;
 
     // 🚨 朝 8:55 を過ぎてジョブが動いた場合は、危険なので強制停止する（FORCE_RUN環境変数が設定されている場合はスキップ）
     let jst_offset = FixedOffset::east_opt(9 * 3600).unwrap();
@@ -19,7 +21,15 @@ async fn main() -> Result<()> {
         println!("（テスト等で強制実行したい場合は、環境変数 FORCE_RUN=true を指定してください）");
         std::process::exit(0);
     }
-    println!("🟢 時間内（JST {}）の起動を確認。証券会社へ予約注文を送信します...", now.format("%H:%M:%S"));
+    println!(
+        "🟢 時間内（JST {}）の起動を確認。{}向けの手動注文提案を生成します...",
+        now.format("%H:%M:%S"),
+        trading.broker
+    );
+    println!(
+        "🛡️ 実行モード: {} / 口座区分: {}（実発注は行いません）",
+        trading.execution_mode, trading.account_type
+    );
     let discord_webhook_url = std::env::var("DISCORD_WEBHOOK_URL").ok();
     let discord_bot_token = std::env::var("DISCORD_BOT_TOKEN").ok();
     let discord_channel_id = std::env::var("DISCORD_CHANNEL_ID").ok();

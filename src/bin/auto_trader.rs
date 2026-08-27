@@ -2,9 +2,11 @@ use std::process::Command;
 use std::fs;
 use chrono::{Local, Timelike, Utc, FixedOffset};
 use anyhow::Result;
+use jp_stock_system::utils::settings::Settings;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let trading = Settings::new()?.trading;
     // 🚨 朝 8:55 を過ぎてジョブが動いた場合は、危険なので強制停止する（FORCE_RUN環境変数が設定されている場合はスキップ）
     let jst_offset = FixedOffset::east_opt(9 * 3600).unwrap();
     let now = Utc::now().with_timezone(&jst_offset);
@@ -15,7 +17,11 @@ async fn main() -> Result<()> {
         println!("（テスト等で強制実行したい場合は、環境変数 FORCE_RUN=true を指定してください）");
         std::process::exit(0);
     }
-    println!("🟢 時間内（JST {}）の起動を確認。証券会社へ予約注文を送信します...", now.format("%H:%M:%S"));
+    println!(
+        "🟢 時間内（JST {}）の起動を確認。{}向けの手動注文提案を生成します...",
+        now.format("%H:%M:%S"),
+        trading.broker
+    );
 
     let today = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     println!("==================================================");
@@ -61,10 +67,10 @@ async fn main() -> Result<()> {
     println!("\n✅ AIスカウトパイプラインが正常に完了しました。");
 
     // ==================================================
-    // 5. 【Future Phase】実際の証券会社APIへの自動発注
+    // 5. 【Future Phase】証券会社APIへの自動発注
     // ==================================================
-    // 将来的に、paper_trade だけでなく実際の証券会社APIを呼び出すモジュールを
-    // ここで結合することで、完全な実弾トレードへと移行可能です。
+    // moomoo証券の日本株・単元未満株は手動発注運用のため、
+    // paper_trade の売買提案を実注文として送信しない。
     
     println!("\n==================================================");
     println!("🏁 すべてのパイプライン処理が正常に終了しました。");

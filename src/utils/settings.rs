@@ -15,9 +15,17 @@ pub struct DataSettings {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct TradingSettings {
+    pub broker: String,
+    pub execution_mode: String,
+    pub account_type: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub jquants: JQuantsSettings,
     pub data: DataSettings,
+    pub trading: TradingSettings,
 }
 
 impl Settings {
@@ -31,6 +39,9 @@ impl Settings {
             .set_default("data.target_dir", "data")?
             .set_default("data.parquet_path", "data/processed_market_data.parquet")?
             .set_default("data.min_valid_size", 819200)? // 800KB
+            .set_default("trading.broker", "moomoo証券")?
+            .set_default("trading.execution_mode", "manual_fractional")?
+            .set_default("trading.account_type", "specified_only")?
             // Load from file
             .add_source(File::with_name("settings").required(false))
             // 既存環境との互換のため大文字名も受け付ける。
