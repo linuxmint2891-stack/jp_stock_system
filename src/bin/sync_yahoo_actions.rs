@@ -1,4 +1,4 @@
-use chrono::{Datelike, Duration, FixedOffset, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, TimeZone, Timelike, Utc};
 use clap::Parser;
 use jp_stock_system::alpha::{alpha_a, alpha_b};
 use jp_stock_system::api::jquants::fetch_daily_bars;
@@ -62,14 +62,18 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. 同期範囲の決定
     // GitHub Actions runner is UTC. 日本市場の営業日判定は常にJSTで行う。
-    let today = jst_today();
+    let now = jst_now();
+    let today = now.date_naive();
+    let expected_latest_date = latest_required_market_date(now);
 
-    // 🔥【強力なガード】デイリーモードかつ、すでに最新データ（今日か昨日）がある場合は即終了！
+    // デイリーモードでは市場終了前は前営業日まで、市場終了後は当日分までを必須とする。
+    // 23:00 JST の定期実行で「昨日まであるから最新」と誤判定しないためのガード。
     if !args.maintenance && file_exists {
-        let gap_days = (today - last_date).num_days();
-        // 土日の場合は金曜日（2日前〜3日前）で止まるため、ギャップが2日以内なら最新とみなす
-        if gap_days <= 1 || (today.weekday().number_from_monday() > 5 && gap_days <= 3) {
-            println!("✨ [Skip] データはすでに最新状態です (Parquet最終日: {} / 本日: {})。処理を終了します。", last_date, today);
+        if last_date >= expected_latest_date {
+            println!(
+                "✨ [Skip] データはすでに最新状態です (Parquet最終日: {} / 必要な最終日: {})。処理を終了します。",
+                last_date, expected_latest_date
+            );
             return Ok(());
         }
     }
@@ -91,13 +95,6 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
 
     let mut all_new_rows = Vec::new();
-    // 日次同期で「取得できなかった」を「最新」と誤認しないための基準日。
-    let expected_latest_date = match today.weekday().number_from_monday() {
-        6 => today - Duration::days(1), // 土曜は金曜終値まで
-        7 => today - Duration::days(2), // 日曜は金曜終値まで
-        _ => today,
-    };
-
     // --- STEP 1: J-Quants Zone (Bulk update) ---
     // 無料プランのJ-Quantsは株価が12週間遅延するため、直近分はYahooで補う。
     let jquants_end_date = today - Duration::days(85);
@@ -395,7 +392,57 @@ fn parquet_path(range: Option<&str>) -> String {
     }
 }
 
-fn jst_today() -> NaiveDate {
+fn jst_now() -> DateTime<FixedOffset> {
     let jst = FixedOffset::east_opt(9 * 60 * 60).expect("JST offset must be valid");
-    Utc::now().with_timezone(&jst).date_naive()
+    Utc::now().with_timezone(&jst)
+}
+
+fn latest_required_market_date(now: DateTime<FixedOffset>) -> NaiveDate {
+    let today = now.date_naive();
+    match today.weekday().number_from_monday() {
+        6 => today - Duration::days(1), // 土曜は金曜終値まで
+        7 => today - Duration::days(2), // 日曜は金曜終値まで
+        _ if now.hour() > 15 || (now.hour() == 15 && now.minute() >= 30) => today,
+        _ => previous_weekday(today),
+    }
+}
+
+fn previous_weekday(mut date: NaiveDate) -> NaiveDate {
+    loop {
+        date -= Duration::days(1);
+        if date.weekday().number_from_monday() <= 5 {
+            return date;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn jst_datetime(year: i32, month: u32, day: u32, hour: u32, minute: u32) -> DateTime<FixedOffset> {
+        FixedOffset::east_opt(9 * 60 * 60)
+            .unwrap()
+            .with_ymd_and_hms(year, month, day, hour, minute, 0)
+            .single()
+            .unwrap()
+    }
+
+    #[test]
+    fn requires_same_day_data_after_market_close() {
+        let friday_night = jst_datetime(2026, 8, 28, 23, 0);
+        assert_eq!(
+            latest_required_market_date(friday_night),
+            NaiveDate::from_ymd_opt(2026, 8, 28).unwrap()
+        );
+    }
+
+    #[test]
+    fn accepts_previous_business_day_before_market_close_or_weekend() {
+        let monday_morning = jst_datetime(2026, 8, 31, 7, 0);
+        let saturday = jst_datetime(2026, 8, 29, 0, 0);
+        let expected = NaiveDate::from_ymd_opt(2026, 8, 28).unwrap();
+        assert_eq!(latest_required_market_date(monday_morning), expected);
+        assert_eq!(latest_required_market_date(saturday), expected);
+    }
 }
