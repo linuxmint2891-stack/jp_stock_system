@@ -183,12 +183,40 @@ async fn main() -> Result<()> {
     let latest_date_df = base_lf.clone().select([col("Date").max()]).collect()?;
     let latest_date_av = latest_date_df.column("Date")?.get(0)?;
     let latest_date_str = latest_date_av.to_string().replace("\"", "");
+
+    // 最新日の終値をポートフォリオ評価へ渡す。stocks.db の古い OHLC ではなく、
+    // 日次同期済みの Parquet を唯一の評価価格ソースとして使う。
+    let latest_prices_df = base_lf
+        .clone()
+        .filter(col("Date").eq(lit(latest_date_str.clone())))
+        .select([col("ShortCode"), col("AdjC")])
+        .collect()?;
+    let mut latest_prices = std::collections::HashMap::new();
+    let latest_codes = latest_prices_df.column("ShortCode")?.str()?;
+    let latest_closes = latest_prices_df.column("AdjC")?.f64()?;
+    for (code, close) in latest_codes.into_iter().zip(latest_closes.into_iter()) {
+        if let (Some(code), Some(close)) = (code, close) {
+            latest_prices.insert(code.to_string(), close);
+        }
+    }
     
     let today_str = Local::now().format("%Y-%m-%d").to_string();
     println!("📅 Latest date in data: {}", latest_date_str);
     if latest_date_str != today_str {
         println!("⚠️  Warning: Data is not up-to-date (Latest: {}, Today: {}).", latest_date_str, today_str);
         println!("⚠️  Please run 'sync_yahoo' if you need today's momentum stocks.");
+    }
+
+    // 候補銘柄の有無とは独立して、既存保有株は毎回必ず最新終値で評価する。
+    println!("\n📈 最新終値（{}）でペーパートレードを評価中...", latest_date_str);
+    if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions_with_prices(
+        &conn,
+        &latest_prices,
+        &latest_date_str,
+    )
+    .await
+    {
+        eprintln!("❌ ポートフォリオ評価中にエラーが発生: {}", e);
     }
 
     println!("🔍 Screening for momentum stocks (Price < 2000, Turnover > 100M, Above MA5, Change > 1%)...");
@@ -206,6 +234,9 @@ async fn main() -> Result<()> {
     
     if scout_candidates.height() == 0 {
         println!("ℹ️  No potential momentum stocks found for {}.", latest_date_str);
+        if let Err(e) = jp_stock_system::paper_trade::log_ai_win_rate(&conn).await {
+            eprintln!("❌ 勝率ログ出力中にエラーが発生: {}", e);
+        }
         return Ok(());
     }
 
@@ -329,11 +360,7 @@ async fn main() -> Result<()> {
         }
     }
 
-    // 6. ポートフォリオの評価と勝率の記録
-    println!("\n📈 ペーパートレードの評価更新を実行中...");
-    if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions(&conn).await {
-        eprintln!("❌ ポートフォリオ評価中にエラーが発生: {}", e);
-    }
+    // 6. ポートフォリオの勝率を記録する（評価更新は候補抽出より前に実施済み）。
     if let Err(e) = jp_stock_system::paper_trade::log_ai_win_rate(&conn).await {
         eprintln!("❌ 勝率ログ出力中にエラーが発生: {}", e);
     }

@@ -1,6 +1,7 @@
 use rusqlite::{Connection, OptionalExtension, params};
 use chrono::Local;
-use polars::prelude::DataFrame;
+use polars::prelude::*;
+use std::collections::HashMap;
 
 /// DBの初期化（仮想トレード用テーブルを追加拡張）
 pub fn init_db_extended(conn: &Connection) -> rusqlite::Result<()> {
@@ -20,7 +21,8 @@ pub fn init_db_extended(conn: &Connection) -> rusqlite::Result<()> {
             current_price REAL,
             status TEXT DEFAULT 'HOLDING',
             holding_days INTEGER DEFAULT 0,
-            exit_reason TEXT
+            exit_reason TEXT,
+            last_evaluated_date TEXT
         )
         ",
         [],
@@ -31,6 +33,7 @@ pub fn init_db_extended(conn: &Connection) -> rusqlite::Result<()> {
     let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN holding_days INTEGER DEFAULT 0", []);
     let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN exit_reason TEXT", []);
     let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN name TEXT", []);
+    let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN last_evaluated_date TEXT", []);
 
     // 2. 決済が完了したトレードの履歴（勝率計算用）
     conn.execute(
@@ -109,6 +112,38 @@ pub fn calculate_fractional_buy_qty(
     Ok(Some((qty, qty as f64 * price)))
 }
 
+/// Parquet の最新営業日における銘柄別終値を読み込む。
+/// ポートフォリオ評価の価格ソースを日次同期データへ統一するために使用する。
+pub fn latest_prices_from_parquet(path: &str) -> PolarsResult<(String, HashMap<String, f64>)> {
+    let market_lf = LazyFrame::scan_parquet(path, Default::default())?
+        .select([col("Date"), col("Code"), col("AdjC")]);
+    let latest_date = market_lf
+        .clone()
+        .select([col("Date").max()])
+        .collect()?
+        .column("Date")?
+        .get(0)?
+        .to_string()
+        .replace('"', "");
+    let latest_prices_df = market_lf
+        .filter(col("Date").eq(lit(latest_date.clone())))
+        .select([
+            col("Code").cast(DataType::String).str().slice(lit(0), lit(4)),
+            col("AdjC"),
+        ])
+        .collect()?;
+
+    let codes = latest_prices_df.column("Code")?.str()?;
+    let closes = latest_prices_df.column("AdjC")?.f64()?;
+    let mut latest_prices = HashMap::new();
+    for (code, close) in codes.into_iter().zip(closes.into_iter()) {
+        if let (Some(code), Some(close)) = (code, close) {
+            latest_prices.insert(code.to_string(), close);
+        }
+    }
+    Ok((latest_date, latest_prices))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,6 +169,31 @@ mod tests {
             calculate_fractional_buy_qty(&conn, 4_000, 3_000, 1_000.0).unwrap(),
             None
         );
+    }
+
+    #[tokio::test]
+    async fn latest_prices_update_valuation_and_high_water_mark() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_db_extended(&conn).unwrap();
+        conn.execute(
+            "INSERT INTO active_positions (code, name, entry_date, entry_price, qty, highest_price, current_price, status, holding_days) VALUES ('0001', 'テスト銘柄', '2026-01-01', 100.0, 10, 100.0, 100.0, 'HOLDING', 0)",
+            [],
+        )
+        .unwrap();
+
+        let latest_prices = HashMap::from([(String::from("0001"), 110.0)]);
+        evaluate_and_exit_positions_with_prices(&conn, &latest_prices, "2026-01-02")
+            .await
+            .unwrap();
+
+        let (current_price, highest_price, holding_days): (f64, f64, i64) = conn
+            .query_row(
+                "SELECT current_price, highest_price, holding_days FROM active_positions WHERE code = '0001'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!((current_price, highest_price, holding_days), (110.0, 110.0, 1));
     }
 }
 
@@ -231,20 +291,46 @@ pub async fn execute_pending_orders(conn: &Connection) -> rusqlite::Result<()> {
 
 /// 保有中ポジションの最新株価更新 ＆ 利確・損切りの自動答え合わせ（PENDING_SELL への移行判定）
 pub async fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<()> {
+    let mut stmt = conn.prepare("SELECT code FROM active_positions WHERE status = 'HOLDING'")?;
+    let codes: Vec<String> = stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    drop(stmt);
+
+    let mut latest_prices = HashMap::new();
+    for code in codes {
+        let latest_close: Option<f64> = conn
+            .query_row(
+                "SELECT close FROM OHLC WHERE code = ?1 ORDER BY date DESC LIMIT 1",
+                [code.clone()],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if let Some(price) = latest_close {
+            latest_prices.insert(code, price);
+        }
+    }
+
+    let evaluation_date = Local::now().format("%Y-%m-%d").to_string();
+    evaluate_and_exit_positions_with_prices(conn, &latest_prices, &evaluation_date).await
+}
+
+/// Parquet など外部の最新終値を使って、保有ポジションを評価する。
+/// `latest_prices` に価格がない銘柄は、古い価格のまま誤判定しないよう評価を行わない。
+pub async fn evaluate_and_exit_positions_with_prices(
+    conn: &Connection,
+    latest_prices: &HashMap<String, f64>,
+    evaluation_date: &str,
+) -> rusqlite::Result<()> {
     // ⚙️ トレーリングストップのパラメータ設定
     let trailing_trigger_pct = 0.05; // 5%以上の含み益でトレーリング発動
     let trailing_drop_pct = 0.03;    // 最高値から3%下落したら利確
     let absolute_stop_loss_pct = -0.05; // 購入価格から5%下落で絶対損切り
 
-    // 1. まず HOLDING 中の全ポジションの保有日数をインクリメント
-    conn.execute(
-        "UPDATE active_positions SET holding_days = holding_days + 1 WHERE status = 'HOLDING'",
-        [],
-    )?;
-
-    // 2. HOLDING 中のポジションを全件取得して評価
+    // HOLDING 中のポジションを全件取得して評価する。
+    // 保有日数は、最新価格を取得できた銘柄だけ加算する。
     let mut stmt = conn.prepare(
-        "SELECT code, entry_date, entry_price, qty, highest_price, holding_days FROM active_positions WHERE status = 'HOLDING'"
+        "SELECT code, entry_date, entry_price, qty, highest_price, holding_days, last_evaluated_date FROM active_positions WHERE status = 'HOLDING'"
     )?;
     let mut rows = stmt.query([])?;
 
@@ -256,24 +342,30 @@ pub async fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<
         let entry_price: f64 = row.get(2)?;
         let _qty: i64 = row.get(3)?;
         let mut highest_price: f64 = row.get(4)?;
-        let holding_days: i64 = row.get(5)?;
+        let previous_holding_days = row.get::<_, i64>(5)?;
+        let last_evaluated_date: Option<String> = row.get(6)?;
 
-        // OHLCテーブルから、この銘柄の「最新の終値」を取得
-        let latest_close: Option<f64> = conn.query_row(
-            "SELECT close FROM OHLC WHERE code = ?1 ORDER BY date DESC LIMIT 1",
-            [code.clone()],
-            |r| r.get(0)
-        ).optional()?;
+        if let Some(&current_price) = latest_prices.get(&code) {
+            if !current_price.is_finite() || current_price <= 0.0 {
+                continue;
+            }
 
-        if let Some(current_price) = latest_close {
+            // 同一の市場データを手動実行しても、保有日数を二重加算しない。
+            if last_evaluated_date.as_deref() == Some(evaluation_date) {
+                continue;
+            }
+            let holding_days = previous_holding_days + 1;
+
             // ① 最高値の更新チェック
             if current_price > highest_price {
                 highest_price = current_price;
-                conn.execute(
-                    "UPDATE active_positions SET highest_price = ?1 WHERE code = ?2",
-                    params![highest_price, code],
-                )?;
             }
+
+            // 決済の有無にかかわらず、レポート用の現在値・最高値・保有日数を先に保存する。
+            conn.execute(
+                "UPDATE active_positions SET current_price = ?1, highest_price = ?2, holding_days = ?3, last_evaluated_date = ?4 WHERE code = ?5",
+                params![current_price, highest_price, holding_days, evaluation_date, code],
+            )?;
 
             // ② 各種損益率の計算
             let current_pl_pct = (current_price - entry_price) / entry_price; // 購入原価からの損益率
@@ -301,11 +393,6 @@ pub async fn evaluate_and_exit_positions(conn: &Connection) -> rusqlite::Result<
             // ④ 決済判定に該当した場合は PENDING_SELL に変更（明朝始値で約定）
             if is_exit {
                 pending_exits.push((code.clone(), exit_reason));
-            } else {
-                conn.execute(
-                    "UPDATE active_positions SET current_price = ?1 WHERE code = ?2",
-                    params![current_price, code],
-                )?;
             }
         }
     }

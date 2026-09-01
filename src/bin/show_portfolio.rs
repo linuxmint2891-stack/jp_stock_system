@@ -16,7 +16,8 @@ async fn main() -> Result<()> {
     let market_data_path = "data/processed_market_data.parquet";
     if std::path::Path::new(market_data_path).exists() {
         println!("📈 最新価格で評価を更新中...");
-        if let Err(e) = paper_trade::evaluate_and_exit_positions(&conn).await {
+        let (latest_date, latest_prices) = paper_trade::latest_prices_from_parquet(market_data_path)?;
+        if let Err(e) = paper_trade::evaluate_and_exit_positions_with_prices(&conn, &latest_prices, &latest_date).await {
             eprintln!("⚠️ 評価損益の更新に失敗しました: {}", e);
         }
     }
