@@ -67,18 +67,28 @@ pub fn record_virtual_buy(
 ) -> rusqlite::Result<()> {
     let today_str = Local::now().format("%Y-%m-%d").to_string();
 
-    // ステータスを PENDING_BUY として挿入（明朝始値で約定）
+    // 手動・ペーパートレードでは、AIの購入提案価格を約定価格として即時に保有扱いにする。
+    // 実際の証券会社で約定した場合は、実約定価格で別途調整する。
     conn.execute(
         "
         INSERT OR IGNORE INTO active_positions
         (code, name, entry_date, entry_price, qty, highest_price, current_price, status, holding_days)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'PENDING_BUY', 0)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'HOLDING', 0)
         ",
         params![code, name, today_str, price, qty, price, price],
     )?;
 
-    println!("📥 [Paper Trade] 仮想購入予約（PENDING_BUY）を追加: {} ({}) (推定価格: {}円) {}株", code, name, price, qty);
+    println!("📥 [Paper Trade] 仮想保有（HOLDING）を追加: {} ({}) (記録価格: {}円) {}株", code, name, price, qty);
     Ok(())
+}
+
+/// 旧バージョンで作成され、約定待ちのまま残ったペーパートレード注文を保有状態へ移行する。
+/// この移行は PENDING_BUY の行にのみ作用し、新規注文は record_virtual_buy で直接 HOLDING となる。
+pub fn activate_legacy_pending_buys(conn: &Connection) -> rusqlite::Result<usize> {
+    conn.execute(
+        "UPDATE active_positions SET status = 'HOLDING' WHERE status = 'PENDING_BUY'",
+        [],
+    )
 }
 
 /// 種銭と予約・保有済み金額から、次の小口購入に使える株数を計算する。
@@ -158,6 +168,10 @@ mod tests {
             Some((3, 3_000.0))
         );
         record_virtual_buy(&conn, "0001", "テスト銘柄", 1_000.0, 3).unwrap();
+        let status: String = conn
+            .query_row("SELECT status FROM active_positions WHERE code = '0001'", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(status, "HOLDING");
 
         assert_eq!(
             calculate_fractional_buy_qty(&conn, 4_000, 3_000, 1_000.0).unwrap(),
@@ -169,6 +183,24 @@ mod tests {
             calculate_fractional_buy_qty(&conn, 4_000, 3_000, 1_000.0).unwrap(),
             None
         );
+    }
+
+    #[test]
+    fn legacy_pending_buys_are_activated_once() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_db_extended(&conn).unwrap();
+        conn.execute(
+            "INSERT INTO active_positions (code, name, entry_date, entry_price, qty, highest_price, current_price, status, holding_days) VALUES ('0001', 'テスト銘柄', '2026-01-01', 100.0, 1, 100.0, 100.0, 'PENDING_BUY', 0)",
+            [],
+        )
+        .unwrap();
+
+        assert_eq!(activate_legacy_pending_buys(&conn).unwrap(), 1);
+        assert_eq!(activate_legacy_pending_buys(&conn).unwrap(), 0);
+        let status: String = conn
+            .query_row("SELECT status FROM active_positions WHERE code = '0001'", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(status, "HOLDING");
     }
 
     #[tokio::test]
