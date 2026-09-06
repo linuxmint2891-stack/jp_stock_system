@@ -2,6 +2,14 @@ use rusqlite::{Connection, OptionalExtension, params};
 use chrono::Local;
 use polars::prelude::*;
 use std::collections::HashMap;
+use crate::utils::settings::ExitStrategySettings;
+
+pub struct MarketPriceSnapshot {
+    pub date: String,
+    pub prices: HashMap<String, f64>,
+    /// 終値ベースの平均絶対日次変動率（ATR相当、0.01 = 1%）。
+    pub atr_percent: HashMap<String, f64>,
+}
 
 /// DBの初期化（仮想トレード用テーブルを追加拡張）
 pub fn init_db_extended(conn: &Connection) -> rusqlite::Result<()> {
@@ -125,8 +133,19 @@ pub fn calculate_fractional_buy_qty(
 /// Parquet の最新営業日における銘柄別終値を読み込む。
 /// ポートフォリオ評価の価格ソースを日次同期データへ統一するために使用する。
 pub fn latest_prices_from_parquet(path: &str) -> PolarsResult<(String, HashMap<String, f64>)> {
+    let snapshot = market_price_snapshot_from_parquet(path, 14)?;
+    Ok((snapshot.date, snapshot.prices))
+}
+
+/// 最新終値と、直近N営業日の終値ベースATR相当値をParquetから作成する。
+/// OHLCの高値・安値を持たないデータ形式のため、平均絶対日次変動率を使用する。
+pub fn market_price_snapshot_from_parquet(
+    path: &str,
+    atr_lookback_days: usize,
+) -> PolarsResult<MarketPriceSnapshot> {
     let market_lf = LazyFrame::scan_parquet(path, Default::default())?
         .select([col("Date"), col("Code"), col("AdjC")]);
+    let daily_return = col("AdjC") / col("AdjC").shift(lit(1)) - lit(1.0);
     let latest_date = market_lf
         .clone()
         .select([col("Date").max()])
@@ -136,22 +155,54 @@ pub fn latest_prices_from_parquet(path: &str) -> PolarsResult<(String, HashMap<S
         .to_string()
         .replace('"', "");
     let latest_prices_df = market_lf
+        .sort(["Code", "Date"], SortMultipleOptions::default())
+        .with_column(
+            when(daily_return.clone().gt_eq(lit(0.0)))
+                .then(daily_return.clone())
+                .otherwise(-daily_return)
+                .over([col("Code")])
+                .alias("daily_abs_return"),
+        )
+        .with_column(
+            col("daily_abs_return")
+                .rolling_mean(RollingOptionsFixedWindow {
+                    window_size: atr_lookback_days,
+                    min_periods: 2,
+                    ..Default::default()
+                })
+                .over([col("Code")])
+                .alias("atr_percent"),
+        )
         .filter(col("Date").eq(lit(latest_date.clone())))
         .select([
             col("Code").cast(DataType::String).str().slice(lit(0), lit(4)),
             col("AdjC"),
+            col("atr_percent"),
         ])
         .collect()?;
 
     let codes = latest_prices_df.column("Code")?.str()?;
     let closes = latest_prices_df.column("AdjC")?.f64()?;
+    let atr_values = latest_prices_df.column("atr_percent")?.f64()?;
     let mut latest_prices = HashMap::new();
-    for (code, close) in codes.into_iter().zip(closes.into_iter()) {
+    let mut atr_percent = HashMap::new();
+    for ((code, close), atr) in codes
+        .into_iter()
+        .zip(closes.into_iter())
+        .zip(atr_values.into_iter())
+    {
         if let (Some(code), Some(close)) = (code, close) {
             latest_prices.insert(code.to_string(), close);
+            if let Some(atr) = atr.filter(|value| value.is_finite() && *value > 0.0) {
+                atr_percent.insert(code.to_string(), atr);
+            }
         }
     }
-    Ok((latest_date, latest_prices))
+    Ok(MarketPriceSnapshot {
+        date: latest_date,
+        prices: latest_prices,
+        atr_percent,
+    })
 }
 
 #[cfg(test)]
@@ -227,6 +278,7 @@ mod tests {
             .unwrap();
         assert_eq!((current_price, highest_price, holding_days), (110.0, 110.0, 1));
     }
+
 }
 
 /// 1. 前日の予約（PENDING）を本日の始値(Open)ベースで約定させる関数
@@ -354,10 +406,33 @@ pub async fn evaluate_and_exit_positions_with_prices(
     latest_prices: &HashMap<String, f64>,
     evaluation_date: &str,
 ) -> rusqlite::Result<()> {
-    // ⚙️ トレーリングストップのパラメータ設定
-    let trailing_trigger_pct = 0.05; // 5%以上の含み益でトレーリング発動
-    let trailing_drop_pct = 0.03;    // 最高値から3%下落したら利確
-    let absolute_stop_loss_pct = -0.05; // 購入価格から5%下落で絶対損切り
+    let default_strategy = ExitStrategySettings {
+        atr_lookback_days: 14,
+        stop_loss_atr_multiplier: 1.5,
+        take_profit_atr_multiplier: 2.5,
+        trailing_stop_atr_multiplier: 1.5,
+        max_stop_loss_percent: 15.0,
+        fallback_atr_percent: 5.0,
+        overrides: HashMap::new(),
+    };
+    evaluate_and_exit_positions_with_strategy(
+        conn,
+        latest_prices,
+        evaluation_date,
+        &HashMap::new(),
+        &default_strategy,
+    )
+    .await
+}
+
+/// 最新価格と銘柄別ATR相当値を使って、設定済みの出口戦略を評価する。
+pub async fn evaluate_and_exit_positions_with_strategy(
+    conn: &Connection,
+    latest_prices: &HashMap<String, f64>,
+    evaluation_date: &str,
+    atr_percent: &HashMap<String, f64>,
+    exit_strategy: &ExitStrategySettings,
+) -> rusqlite::Result<()> {
 
     // HOLDING 中のポジションを全件取得して評価する。
     // 保有日数は、最新価格を取得できた銘柄だけ加算する。
@@ -388,6 +463,25 @@ pub async fn evaluate_and_exit_positions_with_prices(
             }
             let holding_days = previous_holding_days + 1;
 
+            let symbol_override = exit_strategy.overrides.get(&code);
+            let atr = atr_percent
+                .get(&code)
+                .copied()
+                .unwrap_or(exit_strategy.fallback_atr_percent / 100.0);
+            let stop_loss_pct = symbol_override
+                .and_then(|rule| rule.stop_loss_percent)
+                .map(|value| value / 100.0)
+                .unwrap_or(atr * exit_strategy.stop_loss_atr_multiplier)
+                .min(exit_strategy.max_stop_loss_percent / 100.0);
+            let take_profit_pct = symbol_override
+                .and_then(|rule| rule.take_profit_percent)
+                .map(|value| value / 100.0)
+                .unwrap_or(atr * exit_strategy.take_profit_atr_multiplier);
+            let trailing_stop_pct = symbol_override
+                .and_then(|rule| rule.trailing_stop_percent)
+                .map(|value| value / 100.0)
+                .unwrap_or(atr * exit_strategy.trailing_stop_atr_multiplier);
+
             // ① 最高値の更新チェック
             if current_price > highest_price {
                 highest_price = current_price;
@@ -408,14 +502,14 @@ pub async fn evaluate_and_exit_positions_with_prices(
             let mut exit_reason = String::new();
 
             // ③ 決済判定ロジック
-            if current_pl_pct <= absolute_stop_loss_pct {
-                // ① 絶対損切りラインに接触
+            if current_pl_pct <= -stop_loss_pct {
+                // ① ATR連動損切りライン（最大損失の安全上限付き）に接触
                 is_exit = true;
-                exit_reason = "絶対損切り(-5%)".to_string();
-            } else if max_gain_pct >= trailing_trigger_pct && drop_from_peak_pct >= trailing_drop_pct {
-                // ② トレーリングストップ発動（5%以上上昇後、最高値から3%下落）
+                exit_reason = format!("ATR損切り(-{:.1}%)", stop_loss_pct * 100.0);
+            } else if max_gain_pct >= take_profit_pct && drop_from_peak_pct >= trailing_stop_pct {
+                // ② ATR連動トレーリング利確（利確目標到達後、最高値から指定幅下落）
                 is_exit = true;
-                exit_reason = format!("トレーリングストップ利確(ピークから-{:.1}%)", trailing_drop_pct * 100.0);
+                exit_reason = format!("ATRトレーリング利確(ピークから-{:.1}%)", trailing_stop_pct * 100.0);
             } else if holding_days >= 10 {
                 // ③ 10日タイムアウト制限
                 is_exit = true;

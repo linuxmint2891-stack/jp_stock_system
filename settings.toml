@@ -23,6 +23,23 @@ account_type = "specified_only"
 paper_total_budget = 100000
 paper_position_budget = 10000
 
+[exit_strategy]
+# 直近終値の平均絶対変動率をATR相当値として扱い、銘柄別に利確・損切り幅を自動計算する。
+atr_lookback_days = 14
+stop_loss_atr_multiplier = 1.5
+take_profit_atr_multiplier = 2.5
+trailing_stop_atr_multiplier = 1.5
+# どんな銘柄でも、この下落率を超えて損失を許容しない安全上限。
+max_stop_loss_percent = 15.0
+# 上場直後など14日分の履歴がない場合に使うATR相当値。
+fallback_atr_percent = 5.0
+
+# 個別銘柄だけ固定幅にしたい場合の任意上書き例。
+# [exit_strategy.overrides."5129"]
+# stop_loss_percent = 12.0
+# take_profit_percent = 20.0
+# trailing_stop_percent = 8.0
+
 [ai_communication]
 language = "Japanese"
 instruction = "全ての出力、コメント、報告、およびAI同士の対話は日本語で行うこと。"

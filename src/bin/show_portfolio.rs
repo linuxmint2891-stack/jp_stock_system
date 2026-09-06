@@ -1,6 +1,7 @@
 use rusqlite::Connection;
 use anyhow::Result;
 use jp_stock_system::paper_trade;
+use jp_stock_system::utils::settings::Settings;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -16,8 +17,18 @@ async fn main() -> Result<()> {
     let market_data_path = "data/processed_market_data.parquet";
     if std::path::Path::new(market_data_path).exists() {
         println!("📈 最新価格で評価を更新中...");
-        let (latest_date, latest_prices) = paper_trade::latest_prices_from_parquet(market_data_path)?;
-        if let Err(e) = paper_trade::evaluate_and_exit_positions_with_prices(&conn, &latest_prices, &latest_date).await {
+        let exit_strategy = Settings::new()?.exit_strategy;
+        let market_snapshot = paper_trade::market_price_snapshot_from_parquet(
+            market_data_path,
+            exit_strategy.atr_lookback_days,
+        )?;
+        if let Err(e) = paper_trade::evaluate_and_exit_positions_with_strategy(
+            &conn,
+            &market_snapshot.prices,
+            &market_snapshot.date,
+            &market_snapshot.atr_percent,
+            &exit_strategy,
+        ).await {
             eprintln!("⚠️ 評価損益の更新に失敗しました: {}", e);
         }
     }

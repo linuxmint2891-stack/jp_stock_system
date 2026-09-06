@@ -9,7 +9,9 @@ use chrono::{Local, Utc, FixedOffset};
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
-    let trading = Settings::new()?.trading;
+    let settings = Settings::new()?;
+    let trading = settings.trading;
+    let exit_strategy = settings.exit_strategy;
 
     // 手動注文運用中は、時刻を理由にAI Scoutを停止しない。
     // 実発注を自動化する際は、以下のガードレールを再有効化すること。
@@ -192,21 +194,11 @@ async fn main() -> Result<()> {
     let latest_date_av = latest_date_df.column("Date")?.get(0)?;
     let latest_date_str = latest_date_av.to_string().replace("\"", "");
 
-    // 最新日の終値をポートフォリオ評価へ渡す。stocks.db の古い OHLC ではなく、
-    // 日次同期済みの Parquet を唯一の評価価格ソースとして使う。
-    let latest_prices_df = base_lf
-        .clone()
-        .filter(col("Date").eq(lit(latest_date_str.clone())))
-        .select([col("ShortCode"), col("AdjC")])
-        .collect()?;
-    let mut latest_prices = std::collections::HashMap::new();
-    let latest_codes = latest_prices_df.column("ShortCode")?.str()?;
-    let latest_closes = latest_prices_df.column("AdjC")?.f64()?;
-    for (code, close) in latest_codes.into_iter().zip(latest_closes.into_iter()) {
-        if let (Some(code), Some(close)) = (code, close) {
-            latest_prices.insert(code.to_string(), close);
-        }
-    }
+    // 同期済みParquetから最新終値と、直近14日（設定可）のATR相当値を取得する。
+    let market_snapshot = jp_stock_system::paper_trade::market_price_snapshot_from_parquet(
+        market_data_path,
+        exit_strategy.atr_lookback_days,
+    )?;
     
     let today_str = Local::now().format("%Y-%m-%d").to_string();
     println!("📅 Latest date in data: {}", latest_date_str);
@@ -217,10 +209,12 @@ async fn main() -> Result<()> {
 
     // 候補銘柄の有無とは独立して、既存保有株は毎回必ず最新終値で評価する。
     println!("\n📈 最新終値（{}）でペーパートレードを評価中...", latest_date_str);
-    if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions_with_prices(
+    if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions_with_strategy(
         &conn,
-        &latest_prices,
+        &market_snapshot.prices,
         &latest_date_str,
+        &market_snapshot.atr_percent,
+        &exit_strategy,
     )
     .await
     {

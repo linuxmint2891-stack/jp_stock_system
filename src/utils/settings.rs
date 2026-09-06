@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use config::{Config, ConfigError, File};
 use std::env;
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JQuantsSettings {
@@ -24,10 +25,30 @@ pub struct TradingSettings {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct SymbolExitOverride {
+    pub stop_loss_percent: Option<f64>,
+    pub take_profit_percent: Option<f64>,
+    pub trailing_stop_percent: Option<f64>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ExitStrategySettings {
+    pub atr_lookback_days: usize,
+    pub stop_loss_atr_multiplier: f64,
+    pub take_profit_atr_multiplier: f64,
+    pub trailing_stop_atr_multiplier: f64,
+    pub max_stop_loss_percent: f64,
+    pub fallback_atr_percent: f64,
+    #[serde(default)]
+    pub overrides: HashMap<String, SymbolExitOverride>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub jquants: JQuantsSettings,
     pub data: DataSettings,
     pub trading: TradingSettings,
+    pub exit_strategy: ExitStrategySettings,
 }
 
 impl Settings {
@@ -46,6 +67,12 @@ impl Settings {
             .set_default("trading.account_type", "specified_only")?
             .set_default("trading.paper_total_budget", 100_000_u64)?
             .set_default("trading.paper_position_budget", 10_000_u64)?
+            .set_default("exit_strategy.atr_lookback_days", 14)?
+            .set_default("exit_strategy.stop_loss_atr_multiplier", 1.5)?
+            .set_default("exit_strategy.take_profit_atr_multiplier", 2.5)?
+            .set_default("exit_strategy.trailing_stop_atr_multiplier", 1.5)?
+            .set_default("exit_strategy.max_stop_loss_percent", 15.0)?
+            .set_default("exit_strategy.fallback_atr_percent", 5.0)?
             // Load from file
             .add_source(File::with_name("settings").required(false))
             // 既存環境との互換のため大文字名も受け付ける。
