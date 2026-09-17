@@ -177,14 +177,7 @@ async fn main() -> anyhow::Result<()> {
                 anyhow::bail!("範囲指定の開始値が終了値を超えています: {range_str}");
             }
 
-            codes.retain(|code| {
-                code.chars()
-                    .filter(|c| c.is_ascii_digit())
-                    .collect::<String>()
-                    .get(..4)
-                    .and_then(|value| value.parse::<u32>().ok())
-                    .is_some_and(|value| value >= start && value <= end)
-            });
+            codes.retain(|code| code_belongs_to_range(code, start, end));
             println!("🎯 [Range Filter] {range_str} (対象: {} 銘柄)", codes.len());
         }
 
@@ -392,6 +385,16 @@ fn parquet_path(range: Option<&str>) -> String {
     }
 }
 
+/// 分割Parquetの作成時と同じ、先頭4文字の辞書順で銘柄を振り分ける。
+/// これにより 323A・336A のような英数字コードも、作成済みの適切なシャードで
+/// Yahoo同期の対象から漏れない。
+fn code_belongs_to_range(code: &str, start: u32, end: u32) -> bool {
+    let short_code: String = code.chars().take(4).collect();
+    let start_code = format!("{start:04}");
+    let end_code = format!("{end:04}");
+    short_code >= start_code && short_code <= end_code
+}
+
 fn jst_now() -> DateTime<FixedOffset> {
     let jst = FixedOffset::east_opt(9 * 60 * 60).expect("JST offset must be valid");
     Utc::now().with_timezone(&jst)
@@ -444,5 +447,14 @@ mod tests {
         let expected = NaiveDate::from_ymd_opt(2026, 8, 28).unwrap();
         assert_eq!(latest_required_market_date(monday_morning), expected);
         assert_eq!(latest_required_market_date(saturday), expected);
+    }
+
+    #[test]
+    fn range_filter_keeps_alphanumeric_codes_in_their_existing_shard() {
+        assert!(code_belongs_to_range("323A", 3001, 6000));
+        assert!(code_belongs_to_range("336A", 3001, 6000));
+        assert!(code_belongs_to_range("4005", 3001, 6000));
+        assert!(!code_belongs_to_range("323A", 1000, 3000));
+        assert!(!code_belongs_to_range("323A", 6001, 9999));
     }
 }

@@ -130,14 +130,14 @@ pub fn calculate_fractional_buy_qty(
     Ok(Some((qty, qty as f64 * price)))
 }
 
-/// Parquet の最新営業日における銘柄別終値を読み込む。
+/// Parquet の銘柄別最新終値を読み込む。
 /// ポートフォリオ評価の価格ソースを日次同期データへ統一するために使用する。
 pub fn latest_prices_from_parquet(path: &str) -> PolarsResult<(String, HashMap<String, f64>)> {
     let snapshot = market_price_snapshot_from_parquet(path, 14)?;
     Ok((snapshot.date, snapshot.prices))
 }
 
-/// 最新終値と、直近N営業日の終値ベースATR相当値をParquetから作成する。
+/// 銘柄別の最新終値と、直近N営業日の終値ベースATR相当値をParquetから作成する。
 /// OHLCの高値・安値を持たないデータ形式のため、平均絶対日次変動率を使用する。
 pub fn market_price_snapshot_from_parquet(
     path: &str,
@@ -173,7 +173,13 @@ pub fn market_price_snapshot_from_parquet(
                 .over([col("Code")])
                 .alias("atr_percent"),
         )
-        .filter(col("Date").eq(lit(latest_date.clone())))
+        // 銘柄間で最新日が完全には揃わないことがあるため、全体の最新日で絞り込まない。
+        // 各銘柄の最終行を採用し、部分同期されたParquetでも保有銘柄の評価価格を更新する。
+        .group_by([col("Code")])
+        .agg([
+            col("AdjC").last().alias("AdjC"),
+            col("atr_percent").last().alias("atr_percent"),
+        ])
         .select([
             col("Code").cast(DataType::String).str().slice(lit(0), lit(4)),
             col("AdjC"),
