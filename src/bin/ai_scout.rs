@@ -4,7 +4,7 @@ use jp_stock_system::api::approver::TradeApprover;
 use jp_stock_system::utils::settings::Settings;
 use std::fs::OpenOptions;
 use std::io::Write;
-use chrono::{Local, Utc, FixedOffset};
+use chrono::{FixedOffset, Local, NaiveDate, Utc};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -75,12 +75,6 @@ async fn main() -> Result<()> {
             "✅ [Paper Trade] 旧形式の購入予約 {}件を HOLDING へ移行しました。",
             activated
         );
-    }
-
-    // 1. 【約定フェーズ】既存の売却予約（PENDING_SELL）を本日の始値(Open)ベースで約定させる
-    println!("\n📥 [約定フェーズ] 予約注文の約定処理を実行中...");
-    if let Err(e) = jp_stock_system::paper_trade::execute_pending_orders(&conn).await {
-        eprintln!("❌ 予約注文の約定処理中にエラーが発生: {}", e);
     }
 
     let market_data_path = "data/processed_market_data.parquet";
@@ -200,11 +194,39 @@ async fn main() -> Result<()> {
         exit_strategy.atr_lookback_days,
     )?;
     
-    let today_str = Local::now().format("%Y-%m-%d").to_string();
-    println!("📅 Latest date in data: {}", latest_date_str);
-    if latest_date_str != today_str {
-        println!("⚠️  Warning: Data is not up-to-date (Latest: {}, Today: {}).", latest_date_str, today_str);
-        println!("⚠️  Please run 'sync_yahoo' if you need today's momentum stocks.");
+    // 売買判断に使う価格ソースは、候補抽出用CSVではなく統合Parquetに固定する。
+    let snapshot_date = market_snapshot.date.clone();
+    let data_age_days = market_data_age_days(&snapshot_date, now.date_naive())?;
+    println!("📅 Latest date in merged Parquet: {} (JST経過日数: {})", snapshot_date, data_age_days);
+
+    // 古い価格で損切り・利確・注文約定を行うことを防ぐ。祝日連休を考慮して5日までは許容する。
+    if !(0..=MAX_MARKET_DATA_AGE_DAYS).contains(&data_age_days) {
+        let message = format!(
+            "統合Parquetの最終日が {}（JST {}日遅延）です。同期が完了するまで、ポートフォリオ評価・約定・売買提案を中止しました。",
+            snapshot_date,
+            data_age_days.max(0),
+        );
+        eprintln!("🚨 [Data Freshness Guard] {}", message);
+        writeln!(log_file, "🚨 [Data Freshness Guard] {}", message)?;
+        if let Err(error) = jp_stock_system::api::discord::notify_system_alert(
+            "市場データ同期停止",
+            &message,
+        )
+        .await
+        {
+            eprintln!("⚠️ Discord同期異常通知に失敗しました: {}", error);
+        }
+        anyhow::bail!("{}", message);
+    }
+
+    if data_age_days > 1 {
+        println!("⚠️ 市場データは {} 日前の終値です。休場日以外なら同期ログを確認してください。", data_age_days);
+    }
+
+    // データが新鮮であることを確認してから、既存の売却予約を始値ベースで約定させる。
+    println!("\n📥 [約定フェーズ] 予約注文の約定処理を実行中...");
+    if let Err(e) = jp_stock_system::paper_trade::execute_pending_orders(&conn).await {
+        eprintln!("❌ 予約注文の約定処理中にエラーが発生: {}", e);
     }
 
     // 候補銘柄の有無とは独立して、既存保有株は毎回必ず最新終値で評価する。
@@ -212,7 +234,7 @@ async fn main() -> Result<()> {
     if let Err(e) = jp_stock_system::paper_trade::evaluate_and_exit_positions_with_strategy(
         &conn,
         &market_snapshot.prices,
-        &latest_date_str,
+        &snapshot_date,
         &market_snapshot.atr_percent,
         &exit_strategy,
     )
@@ -368,4 +390,26 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+
+const MAX_MARKET_DATA_AGE_DAYS: i64 = 5;
+
+fn market_data_age_days(latest_date: &str, today: NaiveDate) -> Result<i64> {
+    let latest_date = NaiveDate::parse_from_str(latest_date, "%Y-%m-%d")
+        .map_err(|error| anyhow::anyhow!("Parquet最終日の形式が不正です ({latest_date}): {error}"))?;
+    Ok((today - latest_date).num_days())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn freshness_guard_allows_weekends_but_rejects_old_data() {
+        let today = NaiveDate::from_ymd_opt(2026, 9, 30).unwrap();
+        assert_eq!(market_data_age_days("2026-09-29", today).unwrap(), 1);
+        assert_eq!(market_data_age_days("2026-09-25", today).unwrap(), 5);
+        assert_eq!(market_data_age_days("2026-09-17", today).unwrap(), 13);
+    }
 }

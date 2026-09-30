@@ -84,6 +84,37 @@ pub async fn notify_discord(ticker: &str, score: f64, reason: &str) -> Result<()
     Ok(())
 }
 
+
+/// 市場データの停止など、売買判断そのものを中止すべき異常をDiscordへ通知する。
+pub async fn notify_system_alert(title: &str, message: &str) -> Result<(), reqwest::Error> {
+    let webhook_url = match env::var("DISCORD_WEBHOOK_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            eprintln!("[Warning] DISCORD_WEBHOOK_URL is not set. Skipping system alert.");
+            return Ok(());
+        }
+    };
+
+    let payload = DiscordWebhookPayload {
+        username: "株AIスカウトシステム".to_string(),
+        avatar_url: None,
+        embeds: vec![DiscordEmbed {
+            title: format!("🚨 {}", title),
+            description: "古い市場データによる誤った売買判断を防ぐため、今回のAI Scout実行を停止しました。".to_string(),
+            color: 15158332,
+            fields: vec![EmbedField {
+                name: "詳細".to_string(),
+                value: message.to_string(),
+                inline: false,
+            }],
+        }],
+    };
+
+    let client = reqwest::Client::new();
+    client.post(&webhook_url).json(&payload).send().await?;
+    Ok(())
+}
+
 /// 💥 決済（トレーリングストップ・絶対損切り）が発動したことをDiscordに通知する
 pub async fn notify_trade_exit(
     code: &str,

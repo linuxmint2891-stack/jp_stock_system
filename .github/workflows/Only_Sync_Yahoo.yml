@@ -97,3 +97,20 @@ jobs:
       - name: Cleanup credentials
         if: always()
         run: rm -f client_secret.json
+
+  notify_sync_failure:
+    name: Notify sync failure
+    needs: [sync_shard, merge_shards]
+    if: ${{ always() && (needs.sync_shard.result == 'failure' || needs.merge_shards.result == 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            curl --fail --silent --show-error \
+              -H "Content-Type: application/json" \
+              --data '{"content":"🚨 市場データ同期に失敗しました。統合Parquetは更新されていないため、AI Scoutは安全のため売買判断を停止します。GitHub Actionsの Sync Yahoo Data Only ログを確認してください。"}' \
+              "$DISCORD_WEBHOOK_URL"
+          fi
