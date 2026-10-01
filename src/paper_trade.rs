@@ -7,6 +7,8 @@ use crate::utils::settings::ExitStrategySettings;
 pub struct MarketPriceSnapshot {
     pub date: String,
     pub prices: HashMap<String, f64>,
+    /// 銘柄別に採用した終値の日付。価格の鮮度検証に使用する。
+    pub price_dates: HashMap<String, String>,
     /// 終値ベースの平均絶対日次変動率（ATR相当、0.01 = 1%）。
     pub atr_percent: HashMap<String, f64>,
 }
@@ -143,8 +145,18 @@ pub fn market_price_snapshot_from_parquet(
     path: &str,
     atr_lookback_days: usize,
 ) -> PolarsResult<MarketPriceSnapshot> {
-    let market_lf = LazyFrame::scan_parquet(path, Default::default())?
-        .select([col("Date"), col("Code"), col("AdjC")]);
+    // J-Quants由来の5桁コード（例: 67680）とYahoo由来の4桁コード（6768）を
+    // 同一銘柄として扱う。正規化より後の全計算を4桁コード単位で行うことで、
+    // 古い5桁履歴が新しいYahoo終値を上書きすることを防ぐ。
+    let market_lf = LazyFrame::scan_parquet(path, Default::default())?.select([
+        col("Date"),
+        col("Code")
+            .cast(DataType::String)
+            .str()
+            .slice(lit(0), lit(4))
+            .alias("Code"),
+        col("AdjC"),
+    ]);
     let daily_return = col("AdjC") / col("AdjC").shift(lit(1)) - lit(1.0);
     let latest_date = market_lf
         .clone()
@@ -177,28 +189,34 @@ pub fn market_price_snapshot_from_parquet(
         // 各銘柄の最終行を採用し、部分同期されたParquetでも保有銘柄の評価価格を更新する。
         .group_by([col("Code")])
         .agg([
+            col("Date").last().alias("price_date"),
             col("AdjC").last().alias("AdjC"),
             col("atr_percent").last().alias("atr_percent"),
         ])
         .select([
-            col("Code").cast(DataType::String).str().slice(lit(0), lit(4)),
+            col("Code"),
+            col("price_date"),
             col("AdjC"),
             col("atr_percent"),
         ])
         .collect()?;
 
     let codes = latest_prices_df.column("Code")?.str()?;
+    let price_date_values = latest_prices_df.column("price_date")?.str()?;
     let closes = latest_prices_df.column("AdjC")?.f64()?;
     let atr_values = latest_prices_df.column("atr_percent")?.f64()?;
     let mut latest_prices = HashMap::new();
+    let mut price_dates = HashMap::new();
     let mut atr_percent = HashMap::new();
-    for ((code, close), atr) in codes
+    for (((code, price_date), close), atr) in codes
         .into_iter()
+        .zip(price_date_values.into_iter())
         .zip(closes.into_iter())
         .zip(atr_values.into_iter())
     {
-        if let (Some(code), Some(close)) = (code, close) {
+        if let (Some(code), Some(price_date), Some(close)) = (code, price_date, close) {
             latest_prices.insert(code.to_string(), close);
+            price_dates.insert(code.to_string(), price_date.to_string());
             if let Some(atr) = atr.filter(|value| value.is_finite() && *value > 0.0) {
                 atr_percent.insert(code.to_string(), atr);
             }
@@ -207,6 +225,7 @@ pub fn market_price_snapshot_from_parquet(
     Ok(MarketPriceSnapshot {
         date: latest_date,
         prices: latest_prices,
+        price_dates,
         atr_percent,
     })
 }
@@ -258,6 +277,34 @@ mod tests {
             .query_row("SELECT status FROM active_positions WHERE code = '0001'", [], |row| row.get(0))
             .unwrap();
         assert_eq!(status, "HOLDING");
+    }
+
+    #[test]
+    fn snapshot_normalizes_jquants_and_yahoo_codes_before_selecting_latest_price() {
+        let path = std::env::temp_dir().join(format!(
+            "jp_stock_snapshot_{}_{}.parquet",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let mut df = df!(
+            "Date" => ["2026-09-17", "2026-09-30", "2026-09-17", "2026-09-30"],
+            "Code" => ["67680", "6768", "85180", "8518"],
+            "AdjC" => [778.0, 810.0, 156.0, 170.0]
+        )
+        .unwrap();
+        ParquetWriter::new(std::fs::File::create(&path).unwrap())
+            .finish(&mut df)
+            .unwrap();
+
+        let snapshot = market_price_snapshot_from_parquet(path.to_str().unwrap(), 2).unwrap();
+        assert_eq!(snapshot.date, "2026-09-30");
+        assert_eq!(snapshot.prices.get("6768"), Some(&810.0));
+        assert_eq!(snapshot.prices.get("8518"), Some(&170.0));
+        assert_eq!(snapshot.price_dates.get("6768").map(String::as_str), Some("2026-09-30"));
+        std::fs::remove_file(path).unwrap();
     }
 
     #[tokio::test]

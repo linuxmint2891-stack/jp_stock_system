@@ -200,11 +200,48 @@ async fn main() -> Result<()> {
     println!("📅 Latest date in merged Parquet: {} (JST経過日数: {})", snapshot_date, data_age_days);
 
     // 古い価格で損切り・利確・注文約定を行うことを防ぐ。祝日連休を考慮して5日までは許容する。
-    if !(0..=MAX_MARKET_DATA_AGE_DAYS).contains(&data_age_days) {
-        let message = format!(
-            "統合Parquetの最終日が {}（JST {}日遅延）です。同期が完了するまで、ポートフォリオ評価・約定・売買提案を中止しました。",
+    let mut stale_reasons = Vec::new();
+    if !is_acceptable_market_data_age(data_age_days) {
+        stale_reasons.push(format!(
+            "統合Parquetの最終日が {}（JST {}日遅延）です",
             snapshot_date,
             data_age_days.max(0),
+        ));
+    }
+
+    // 全体のParquetが新しくても、保有銘柄だけ古い5桁コードに残るケースを検出する。
+    let mut stmt = conn.prepare(
+        "SELECT code FROM active_positions WHERE status IN ('HOLDING', 'PENDING_SELL')",
+    )?;
+    let holding_codes: Vec<String> = stmt
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    drop(stmt);
+    for code in holding_codes {
+        let normalized_code: String = code.chars().take(4).collect();
+        match market_snapshot.price_dates.get(&normalized_code) {
+            Some(price_date) => {
+                let price_age_days = market_data_age_days(price_date, now.date_naive())?;
+                if !is_acceptable_market_data_age(price_age_days) {
+                    stale_reasons.push(format!(
+                        "{} の価格日が {}（JST {}日遅延）です",
+                        normalized_code,
+                        price_date,
+                        price_age_days.max(0),
+                    ));
+                }
+            }
+            None => stale_reasons.push(format!(
+                "{} の価格データが統合Parquetにありません",
+                normalized_code
+            )),
+        }
+    }
+
+    if !stale_reasons.is_empty() {
+        let message = format!(
+            "{}。同期が完了するまで、ポートフォリオ評価・約定・売買提案を中止しました。",
+            stale_reasons.join(" / "),
         );
         eprintln!("🚨 [Data Freshness Guard] {}", message);
         writeln!(log_file, "🚨 [Data Freshness Guard] {}", message)?;
@@ -395,6 +432,10 @@ async fn main() -> Result<()> {
 
 const MAX_MARKET_DATA_AGE_DAYS: i64 = 5;
 
+fn is_acceptable_market_data_age(age_days: i64) -> bool {
+    (0..=MAX_MARKET_DATA_AGE_DAYS).contains(&age_days)
+}
+
 fn market_data_age_days(latest_date: &str, today: NaiveDate) -> Result<i64> {
     let latest_date = NaiveDate::parse_from_str(latest_date, "%Y-%m-%d")
         .map_err(|error| anyhow::anyhow!("Parquet最終日の形式が不正です ({latest_date}): {error}"))?;
@@ -411,5 +452,8 @@ mod tests {
         assert_eq!(market_data_age_days("2026-09-29", today).unwrap(), 1);
         assert_eq!(market_data_age_days("2026-09-25", today).unwrap(), 5);
         assert_eq!(market_data_age_days("2026-09-17", today).unwrap(), 13);
+        assert!(is_acceptable_market_data_age(5));
+        assert!(!is_acceptable_market_data_age(6));
+        assert!(!is_acceptable_market_data_age(-1));
     }
 }
