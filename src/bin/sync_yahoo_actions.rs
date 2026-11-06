@@ -7,7 +7,7 @@ use jp_stock_system::api::yahoo::fetch_yahoo_bulk;
 use jp_stock_system::utils::get_unique_codes;
 use jp_stock_system::utils::settings::Settings;
 use polars::prelude::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -66,10 +66,19 @@ async fn main() -> anyhow::Result<()> {
     let today = now.date_naive();
     let expected_latest_date = latest_required_market_date(now);
 
+    // 統合Parquet全体が最新でも、保有中の銘柄だけ古いまま残ることがある。
+    // stocks.db がある実行では、その銘柄だけを個別に補完する。
+    let stale_holding_codes = if !args.maintenance && file_exists && last_date >= expected_latest_date {
+        stale_holding_codes(&parquet_path, expected_latest_date)?
+    } else {
+        Vec::new()
+    };
+    let repair_stale_holdings_only = !stale_holding_codes.is_empty();
+
     // デイリーモードでは市場終了前は前営業日まで、市場終了後は当日分までを必須とする。
     // 23:00 JST の定期実行で「昨日まであるから最新」と誤判定しないためのガード。
     if !args.maintenance && file_exists {
-        if last_date >= expected_latest_date {
+        if last_date >= expected_latest_date && !repair_stale_holdings_only {
             println!(
                 "✨ [Skip] データはすでに最新状態です (Parquet最終日: {} / 必要な最終日: {})。処理を終了します。",
                 last_date, expected_latest_date
@@ -93,6 +102,53 @@ async fn main() -> anyhow::Result<()> {
         .cookie_store(true)
         .timeout(std::time::Duration::from_secs(30))
         .build()?;
+
+    if repair_stale_holdings_only {
+        let stale_holding_summary = stale_holding_codes
+            .iter()
+            .map(|(code, date)| format!("{code}（最終価格日: {date}）"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        println!(
+            "🔧 [Holding Repair] 保有中で価格が古い {} 銘柄をYahooから補完します...",
+            stale_holding_codes.len()
+        );
+        let mut repair_rows = Vec::new();
+        for (code, last_price_date) in stale_holding_codes {
+            let symbol = format!("{}.T", code);
+            let start_date = last_price_date.succ_opt().unwrap_or(last_price_date);
+            let start_timestamp = Utc
+                .from_utc_datetime(&start_date.and_hms_opt(0, 0, 0).unwrap())
+                .timestamp();
+            let ohlcs = fetch_ohlc(&client, &symbol, start_timestamp).await;
+            for ohlc in ohlcs {
+                let date = Utc
+                    .timestamp_opt(ohlc.timestamp, 0)
+                    .unwrap()
+                    .naive_utc()
+                    .date();
+                if date > last_price_date && date <= expected_latest_date {
+                    repair_rows.push((
+                        date.to_string(),
+                        code.clone(),
+                        ohlc.close,
+                        ohlc.close * ohlc.volume,
+                        ohlc.volume,
+                    ));
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+
+        if repair_rows.is_empty() {
+            anyhow::bail!(
+                "保有中の古い銘柄をYahooから補完できませんでした。対象銘柄: {}",
+                stale_holding_summary
+            );
+        }
+        merge_and_save(&parquet_path, repair_rows)?;
+        return Ok(());
+    }
 
     let mut all_new_rows = Vec::new();
     // --- STEP 1: J-Quants Zone (Bulk update) ---
@@ -385,6 +441,61 @@ fn parquet_path(range: Option<&str>) -> String {
     }
 }
 
+/// 取得済みの行を既存Parquetへ統合し、アルファを再計算して保存する。
+fn merge_and_save(
+    parquet_path: &str,
+    new_rows: Vec<(String, String, f64, f64, f64)>,
+) -> anyhow::Result<()> {
+    println!("🔗 Merging {} new rows...", new_rows.len());
+
+    let dates: Vec<String> = new_rows.iter().map(|row| row.0.clone()).collect();
+    let codes: Vec<String> = new_rows.iter().map(|row| row.1.clone()).collect();
+    let adj_c: Vec<f64> = new_rows.iter().map(|row| row.2).collect();
+    let va: Vec<f64> = new_rows.iter().map(|row| row.3).collect();
+    let adj_vo: Vec<f64> = new_rows.iter().map(|row| row.4).collect();
+    let new_df = df!(
+        "Date" => dates,
+        "Code" => codes,
+        "AdjC" => adj_c,
+        "Va" => va,
+        "AdjVo" => adj_vo
+    )?;
+    let new_lf = new_df.lazy().with_column(lit("").alias("news_text"));
+
+    let combined_lf = if Path::new(parquet_path).exists() {
+        let existing_lf = LazyFrame::scan_parquet(parquet_path, Default::default())?.select([
+            col("Date"),
+            col("Code"),
+            col("AdjC"),
+            col("Va"),
+            col("AdjVo"),
+            col("news_text"),
+        ]);
+        concat([existing_lf, new_lf], UnionArgs::default())?
+    } else {
+        new_lf
+    };
+
+    let final_df = combined_lf
+        .unique(
+            Some(vec!["Date".into(), "Code".into()]),
+            UniqueKeepStrategy::Last,
+        )
+        .sort(["Code", "Date"], SortMultipleOptions::default())
+        .collect()?;
+    println!("🧪 Computing Alphas...");
+    let alpha_df = alpha_a::compute(final_df.clone().lazy());
+    let alpha_df = alpha_b::compute(alpha_df);
+    let mut final_df = alpha_df.collect()?;
+    let file = fs::File::create(parquet_path)?;
+    ParquetWriter::new(file).finish(&mut final_df)?;
+    println!(
+        "✅ Parquet updated successfully. Total rows: {}",
+        final_df.height()
+    );
+    Ok(())
+}
+
 /// 分割Parquetの作成時と同じ、先頭4文字の辞書順で銘柄を振り分ける。
 /// これにより 323A・336A のような英数字コードも、作成済みの適切なシャードで
 /// Yahoo同期の対象から漏れない。
@@ -393,6 +504,65 @@ fn code_belongs_to_range(code: &str, start: u32, end: u32) -> bool {
     let start_code = format!("{start:04}");
     let end_code = format!("{end:04}");
     short_code >= start_code && short_code <= end_code
+}
+
+/// 保有中銘柄のうち、統合Parquetの最終日まで価格が届いていないものを返す。
+/// stocks.db がないローカル実行では通常の同期を妨げないため、空配列を返す。
+fn stale_holding_codes(
+    parquet_path: &str,
+    expected_latest_date: NaiveDate,
+) -> anyhow::Result<Vec<(String, NaiveDate)>> {
+    if !Path::new("stocks.db").exists() {
+        return Ok(Vec::new());
+    }
+
+    let conn = rusqlite::Connection::open("stocks.db")?;
+    let mut statement = conn.prepare(
+        "SELECT code FROM active_positions WHERE status IN ('HOLDING', 'PENDING_SELL')",
+    )?;
+    let holding_codes: HashSet<String> = statement
+        .query_map([], |row| row.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?
+        .into_iter()
+        .map(|code| code.chars().take(4).collect())
+        .collect();
+    drop(statement);
+
+    if holding_codes.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let latest_dates = LazyFrame::scan_parquet(parquet_path, Default::default())?
+        .select([
+            col("Code")
+                .cast(DataType::String)
+                .str()
+                .slice(lit(0), lit(4))
+                .alias("Code"),
+            col("Date"),
+        ])
+        .group_by([col("Code")])
+        .agg([col("Date").max().alias("last_price_date")])
+        .collect()?;
+
+    let mut dates_by_code = HashMap::new();
+    let codes = latest_dates.column("Code")?.str()?;
+    let dates = latest_dates.column("last_price_date")?.str()?;
+    for (code, date) in codes.into_iter().zip(dates.into_iter()) {
+        if let (Some(code), Some(date)) = (code, date) {
+            let parsed_date = NaiveDate::parse_from_str(date, "%Y-%m-%d")?;
+            dates_by_code.insert(code.to_owned(), parsed_date);
+        }
+    }
+
+    let fallback_start = expected_latest_date - Duration::days(90);
+    Ok(holding_codes
+        .into_iter()
+        .filter_map(|code| {
+            let last_price_date = dates_by_code.get(&code).copied().unwrap_or(fallback_start);
+            (last_price_date < expected_latest_date).then_some((code, last_price_date))
+        })
+        .collect())
 }
 
 fn jst_now() -> DateTime<FixedOffset> {

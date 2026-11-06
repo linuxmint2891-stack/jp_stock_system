@@ -33,6 +33,12 @@ jobs:
           GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
         run: cargo run --release --bin download_drive
 
+      - name: Download portfolio state for stale-price repair
+        env:
+          GDRIVE_SECRET_JSON: client_secret.json
+          GDRIVE_UPLOAD_FOLDER_ID: ${{ secrets.GDRIVE_UPLOAD_FOLDER_ID }}
+        run: cargo run --release --bin download_drive -- --file-name stocks.db --local-path stocks.db --allow-missing
+
       - name: Sync market data
         env:
           JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
