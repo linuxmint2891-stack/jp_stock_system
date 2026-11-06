@@ -32,7 +32,8 @@ pub fn init_db_extended(conn: &Connection) -> rusqlite::Result<()> {
             status TEXT DEFAULT 'HOLDING',
             holding_days INTEGER DEFAULT 0,
             exit_reason TEXT,
-            last_evaluated_date TEXT
+            last_evaluated_date TEXT,
+            price_date TEXT
         )
         ",
         [],
@@ -44,6 +45,7 @@ pub fn init_db_extended(conn: &Connection) -> rusqlite::Result<()> {
     let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN exit_reason TEXT", []);
     let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN name TEXT", []);
     let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN last_evaluated_date TEXT", []);
+    let _ = conn.execute("ALTER TABLE active_positions ADD COLUMN price_date TEXT", []);
 
     // 2. 決済が完了したトレードの履歴（勝率計算用）
     conn.execute(
@@ -332,6 +334,31 @@ mod tests {
         assert_eq!((current_price, highest_price, holding_days), (110.0, 110.0, 1));
     }
 
+    #[tokio::test]
+    async fn same_market_date_refreshes_price_without_double_counting_holding_days() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_db_extended(&conn).unwrap();
+        conn.execute(
+            "INSERT INTO active_positions (code, name, entry_date, entry_price, qty, highest_price, current_price, status, holding_days, last_evaluated_date) VALUES ('0001', 'テスト銘柄', '2026-01-01', 100.0, 10, 100.0, 100.0, 'HOLDING', 3, '2026-01-02')",
+            [],
+        )
+        .unwrap();
+
+        let latest_prices = HashMap::from([(String::from("0001"), 110.0)]);
+        evaluate_and_exit_positions_with_prices(&conn, &latest_prices, "2026-01-02")
+            .await
+            .unwrap();
+
+        let (current_price, highest_price, holding_days): (f64, f64, i64) = conn
+            .query_row(
+                "SELECT current_price, highest_price, holding_days FROM active_positions WHERE code = '0001'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!((current_price, highest_price, holding_days), (110.0, 110.0, 3));
+    }
+
 }
 
 /// 1. 前日の予約（PENDING）を本日の始値(Open)ベースで約定させる関数
@@ -473,6 +500,7 @@ pub async fn evaluate_and_exit_positions_with_prices(
         latest_prices,
         evaluation_date,
         &HashMap::new(),
+        &HashMap::new(),
         &default_strategy,
     )
     .await
@@ -483,6 +511,7 @@ pub async fn evaluate_and_exit_positions_with_strategy(
     conn: &Connection,
     latest_prices: &HashMap<String, f64>,
     evaluation_date: &str,
+    price_dates: &HashMap<String, String>,
     atr_percent: &HashMap<String, f64>,
     exit_strategy: &ExitStrategySettings,
 ) -> rusqlite::Result<()> {
@@ -510,11 +539,17 @@ pub async fn evaluate_and_exit_positions_with_strategy(
                 continue;
             }
 
-            // 同一の市場データを手動実行しても、保有日数を二重加算しない。
-            if last_evaluated_date.as_deref() == Some(evaluation_date) {
-                continue;
-            }
-            let holding_days = previous_holding_days + 1;
+            // 同じ市場日付を再実行した場合も価格と売却判定は更新する。
+            // ただし保有日数だけは二重加算しない。
+            let holding_days = if last_evaluated_date.as_deref() == Some(evaluation_date) {
+                previous_holding_days
+            } else {
+                previous_holding_days + 1
+            };
+            let price_date = price_dates
+                .get(&code)
+                .map(String::as_str)
+                .unwrap_or(evaluation_date);
 
             let symbol_override = exit_strategy.overrides.get(&code);
             let atr = atr_percent
@@ -542,8 +577,8 @@ pub async fn evaluate_and_exit_positions_with_strategy(
 
             // 決済の有無にかかわらず、レポート用の現在値・最高値・保有日数を先に保存する。
             conn.execute(
-                "UPDATE active_positions SET current_price = ?1, highest_price = ?2, holding_days = ?3, last_evaluated_date = ?4 WHERE code = ?5",
-                params![current_price, highest_price, holding_days, evaluation_date, code],
+                "UPDATE active_positions SET current_price = ?1, highest_price = ?2, holding_days = ?3, last_evaluated_date = ?4, price_date = ?5 WHERE code = ?6",
+                params![current_price, highest_price, holding_days, evaluation_date, price_date, code],
             )?;
 
             // ② 各種損益率の計算
@@ -707,10 +742,10 @@ pub async fn generate_portfolio_report_string(conn: &Connection) -> rusqlite::Re
 
     // 1. 保有中ポジションの表示
     report.push_str("【📈 現在保有中のポジション】\n");
-    report.push_str(" 銘柄コード | 銘柄名               | 購入日     | 購入単価 | 現在値  | 数量 | 評価損益 (最高値)\n");
+    report.push_str(" 銘柄コード | 銘柄名               | 購入日     | 購入単価 | 現在値  | 価格日     | 数量 | 評価損益 (最高値)\n");
     report.push_str("-------------------------------------------------------------------------------------------------\n");
 
-    let mut stmt = conn.prepare("SELECT code, name, entry_date, entry_price, current_price, qty, highest_price FROM active_positions")?;
+    let mut stmt = conn.prepare("SELECT code, name, entry_date, entry_price, current_price, price_date, qty, highest_price FROM active_positions")?;
     let mut rows = stmt.query([])?;
     let mut has_positions = false;
     let mut total_unrealized_pl = 0.0;
@@ -722,14 +757,15 @@ pub async fn generate_portfolio_report_string(conn: &Connection) -> rusqlite::Re
         let date: String = row.get(2)?;
         let e_price: f64 = row.get(3)?;
         let c_price: f64 = row.get(4)?;
-        let qty: i64 = row.get(5)?;
-        let h_price: f64 = row.get(6)?;
+        let price_date: Option<String> = row.get(5)?;
+        let qty: i64 = row.get(6)?;
+        let h_price: f64 = row.get(7)?;
         
         let pl = (c_price - e_price) * (qty as f64);
         total_unrealized_pl += pl;
 
-        report.push_str(&format!(" {:<10} | {:<20} | {:<10} | {:>8.1} | {:>7.1} | {:>4} | {:>+9.1}円 ({:>7.1})\n",
-            code, name, date, e_price, c_price, qty, pl, h_price));
+        report.push_str(&format!(" {:<10} | {:<20} | {:<10} | {:>8.1} | {:>7.1} | {:<10} | {:>4} | {:>+9.1}円 ({:>7.1})\n",
+            code, name, date, e_price, c_price, price_date.unwrap_or_else(|| "未評価".to_string()), qty, pl, h_price));
     }
 
     if !has_positions {

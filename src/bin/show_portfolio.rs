@@ -26,6 +26,7 @@ async fn main() -> Result<()> {
             &conn,
             &market_snapshot.prices,
             &market_snapshot.date,
+            &market_snapshot.price_dates,
             &market_snapshot.atr_percent,
             &exit_strategy,
         ).await {
